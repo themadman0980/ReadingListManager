@@ -20,7 +20,7 @@ class ReadingList:
         for readingList in readingLists:
             readingList.getSummary()
 
-        printResults("Reading Lists: %s" % (ReadingList.count), 2, True)
+        printResults("Lists: %s" % (ReadingList.count), 2, True)
         printResults("All series matched: %s / %s" %
                      (ReadingList.numCompleteSeriesMatches, ReadingList.count), 3)
         printResults("All issues matched: %s / %s" %
