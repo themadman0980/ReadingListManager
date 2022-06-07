@@ -40,6 +40,8 @@ class DB:
 
     def setDBConnection(self):
         self._connection = connectToSource(self._source)
+        if self._connection == None:
+            printResults("Error: Connection to db failed for %s" % (self.source.file), 2)
 
     def connection():
         doc = "The db connection"
@@ -165,7 +167,7 @@ class OnlineDB(DB):
     # Retrieve list of readinglists from index table
     def getListNames(self):
         printResults("Getting list names for source: %s" %
-                     (self.source.name), 4)
+                     (self.source.name), 3)
         if isinstance(self.source, OnlineSource):
             cursor = self.connection.cursor()
 
@@ -194,7 +196,6 @@ class OnlineDB(DB):
 
     # Get DB matches
     def getListDetails(self, listEntryID):
-        # printResults("Getting issue details for %s" % (list.name), 5)
         # Retrieve list of readinglists from index table
         cursor = self.connection.cursor()
         try:

@@ -26,13 +26,15 @@ class ReadingList:
         printResults("All issues matched: %s / %s" %
                      (ReadingList.numCompleteIssueMatches, ReadingList.count), 3)
 
-    def __init__(self, name, source, cvCache, issueList=[], id=None):
+    def __init__(self, name, source, cvCache, issueList=None, id=None):
         ReadingList.count += 1
         try:
             self._name = name
             self.__nameFromPath()
             self._source = source
             self._issueList = issueList
+            if self.issueList == None: 
+                self._issueList = []
             self._id = id
             self._cvCache = cvCache
         except Exception as e:
@@ -185,6 +187,8 @@ class ReadingList:
         doc = "The list of series found in the readinglist"
 
         def fget(self):
+            if self._issueList == None: 
+                self._issueList = []
             return self._issueList
         return locals()
     issueList = property(**issueList())

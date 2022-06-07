@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import readinglistmanager
-from readinglistmanager import filemanager,datasource
+from readinglistmanager import filemanager,datasource,db
 from readinglistmanager.utilities import printResults
 import os
 from readinglistmanager.readinglist import ReadingList
@@ -11,10 +11,10 @@ from readinglistmanager.issue import Issue
 import xml.etree.ElementTree as ET
 
 readingListDB = [
-    {'SourceName': 'CMRO', 'DBTables': {
-        'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
-        }},
-    {'SourceName': 'DCRO', 'DBTables': {
+    #{'SourceName': 'cmro', 'DBTables': {
+    #    'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
+    #    }},
+    {'SourceName': 'dcro', 'DBTables': {
         'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
         }}]
 
@@ -39,11 +39,14 @@ def parseCBLfiles(cvCache):
                         file, datasource.CBLSource(file, filename), cvCache)
 
                     i = 0
+                    count = len(cblinput)
                     printResults("Updating issue data for reading list : %s [%s]" % (
                         readingList.name, readingList.source.type), 3)
 
                     for entry in cblinput:
                         i += 1
+                        printResults("Processing %s / %s" % (i,count),4,False,True)
+
                         curSeries = None
                         # ,'issueYear':entry.attrib['Year']}
                         seriesName = entry.attrib['Series']
@@ -96,12 +99,16 @@ def getOnlineLists(cvCache):
                 listName, curSource, cvCache, None, listID)
 
             # Get all reading list entries from readinglist DB table
+            printResults("Getting issue details for %s" % (curReadingList.name), 3)
             curListDetails = curDB.getListDetails(curReadingList.id)
 
-            #issueList = []
+            count = len(curListDetails)
+            i = 0
 
             # Get details for each list entry from issue DB table
             for listEntry in curListDetails:
+                i += 1
+                printResults("Processing %s / %s" % (i,count),4,False,True)
                 listEntryNum = listEntry[1]
                 listEntryID = listEntry[2]
 
@@ -117,9 +124,12 @@ def getOnlineLists(cvCache):
                     seriesName = entryMatches[0][3]
                     seriesStartYear = entryMatches[0][4]
                     seriesIssueNum = entryMatches[0][5]
-                    curSeries = Series.getSeries(seriesName, seriesStartYear)
-                    curIssue = curSeries.getIssue(seriesIssueNum)
-                    curReadingList.addIssue(curIssue, listEntryNum)
+                    if seriesName is None or seriesStartYear is None:
+                        printResults("Error: Invalid series data found for name='%s' startYear='%s')" % (seriesName,seriesStartYear),4)
+                    else:
+                        curSeries = Series.getSeries(seriesName, seriesStartYear)
+                        curIssue = curSeries.getIssue(seriesIssueNum)
+                        curReadingList.addIssue(curIssue, listEntryNum)
                     #curIssue = Issue(
                     #    seriesIssueNum, curSeries, listEntryNum)
                     #issueList.append(curIssue)

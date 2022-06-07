@@ -100,6 +100,8 @@ class Series:
         self._numIssues = curNumIssues
         self._dateAdded = curDateAdded
         self._issueList = curIssueList
+        if self._issueList is None:
+            self._issueList = []
         self._nameClean = Series.getCleanName(curName)
         self._startYearClean = Series.getCleanStartYear(curStartYear)
         self.checkedCVVolumes = False

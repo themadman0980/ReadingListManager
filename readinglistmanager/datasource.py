@@ -6,17 +6,19 @@ import os
 
 
 class Source:
-    def __init__(self, name, file, type):
+    def __init__(self, name, file, sourceType):
         self._file = file
-        self._name = name
-        self._type = type
+        self._name = name.upper()
+        self._type = sourceType
 
     def isValidFile(self):
-        printResults("Checking if source file exists: %s [%s]" % (
-            self.file, self.name), 2)
         if self.file is not None and os.path.exists(self.file):
             return True
+        
+        printResults("Warning: Source file not found - %s [%s]" % (
+            self.file, self.name), 2)
         return False
+        
 
     def type():
         doc = "The type property."
@@ -103,6 +105,7 @@ class CVSource(Source):
 class OnlineSource(Source):
     def __init__(self, name, file, tableDict):
         super().__init__(name, file, "WEB-DL")
+        printResults("Checking DB data in %s" % (file), 2)
         try:
             self._tableReadingListTitles = tableDict['ReadingLists']
             self._tableReadingListDetails = tableDict['ReadingListDetails']
