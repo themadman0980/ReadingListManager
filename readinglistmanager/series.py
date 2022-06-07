@@ -7,6 +7,7 @@ from readinglistmanager import config
 import time
 from readinglistmanager.issue import Issue
 
+_seriesList = []
 
 class Series:
 
@@ -17,42 +18,37 @@ class Series:
                     'MultipleMatch': 0, 'BlacklistOnlyMatch': 0}
     cvCache = None
 
-    seriesList = []
 
     @classmethod
-    def getSeries(self, name=None, startYear=None, id=None):
+    def getSeries(self,name=None, startYear=None, id=None):
         # Look for series by ID
         if id is not None and str(id).isdigit():
             # Check if there is an existing match for this id
-            for series in Series.seriesList:
+            for series in _seriesList:
                 if series.id == id:
                     return series
 
             # No match! Create series from ID
-            printResults(
-                "No existing series instance found for [%s]" % (id), 4)
             newSeries = Series(None, None, id)
-            Series.seriesList.append(newSeries)
+            _seriesList.append(newSeries)
 
             return newSeries
         # Look for series by name + startYear
         elif name is not None and name != "" and startYear is not None:
             # Check if there is an existing match for this id
-            for series in Series.seriesList:
+            for series in _seriesList:
                 if series.nameClean == Series.getCleanName(name) and series.startYearClean == Series.getCleanStartYear(startYear):
                     return series
 
             # No match! Create series from ID
-            printResults("No existing series instance found for %s (%s)" %
-                         (name, startYear), 4)
             newSeries = Series(name, startYear)
-            Series.seriesList.append(newSeries)
+            _seriesList.append(newSeries)
 
             return newSeries
 
     @classmethod
     def validateAll(self, cvCacheConnection, cvSession):
-        for series in Series.seriesList:
+        for series in _seriesList:
             series.validate(cvCacheConnection, cvSession)
 
     @classmethod
@@ -70,14 +66,9 @@ class Series:
 
         seriesMatched = 0
         seriesComplete = 0
-        seriesCount = len(Series.seriesList)
+        seriesCount = len(_seriesList)
 
-        for series in Series.seriesList:
-            printResults("Series : %s (%s) [%s]" % (
-                series.name, series.startYear, series.id), 4)
-            for issue in series.issueList:
-                printResults("Issue: #%s [%s]" %
-                             (issue.issueNumber, issue.id), 5)
+        for series in _seriesList:
             if series.hasValidID():
                 seriesMatched += 1
             if series.hasCompleteIssueList():
@@ -101,17 +92,16 @@ class Series:
 #        printResults("No Match (Unfound) = %s / %s" %
 #                     (Series.cvMatchTypes['NoMatch'], Series.count), 3)  # No cv matches
 
-    def __init__(self, name, startYear, id=None, publisher=None, numIssues=None, dateAdded=None, issueList=[]):
-        self._name = name
-        self._startYear = startYear
-        self._publisher = publisher
-        # self._id = id if str(id).isdigit() else None
-        self._id = id
-        self._numIssues = numIssues
-        self._dateAdded = dateAdded
-        self._issueList = issueList
-        self._nameClean = Series.getCleanName(name)
-        self._startYearClean = self.getCleanStartYear(startYear)
+    def __init__(self, curName, curStartYear, curID=None, curPublisher=None, curNumIssues=None, curDateAdded=None, curIssueList=None):
+        self._name = curName
+        self._startYear = curStartYear
+        self._publisher = curPublisher
+        self._id = curID
+        self._numIssues = curNumIssues
+        self._dateAdded = curDateAdded
+        self._issueList = curIssueList
+        self._nameClean = Series.getCleanName(curName)
+        self._startYearClean = Series.getCleanStartYear(curStartYear)
         self.checkedCVVolumes = False
         self.checkedCVIssues = False
         self.checkedDB = False
@@ -141,13 +131,9 @@ class Series:
         if issueNumber is not None:
             for issue in self.issueList:
                 if issue.issueNumber == issueNumber:
-                    print("Issue match found: '%s' == '%s'" %
-                          (issue.issueNumber, issueNumber))
                     return issue
 
         # No match found. Create issue
-        printResults("No existing issue instance found for %s (%s) #%s [%s]" % (
-            self.name, self.startYear, issueNumber, id), 5)
         newIssue = Issue(issueNumber, self, id)
         self._issueList.append(newIssue)
 
@@ -465,10 +451,11 @@ class Series:
 
     def issueList():
         doc = "The issueList property."
-
+    
         def fget(self):
+            if self._issueList == None: self._issueList=[]
             return self._issueList
-
+    
         def fdel(self):
             del self._issueList
         return locals()

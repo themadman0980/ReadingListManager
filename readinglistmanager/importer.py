@@ -26,44 +26,45 @@ def parseCBLfiles(cvCache):
                  (filemanager.files.readingListDirectory), 2)
     for root, dirs, files in os.walk(filemanager.files.readingListDirectory):
         for file in files:
-            if file.endswith(".cbl"):
-                #try:
-                filename = os.path.join(root, file)
-                # print("Parsing %s" % (filename))
-                tree = ET.parse(filename)
-                fileroot = tree.getroot()
+            if file.endswith(".cbl") and not file.startswith('._'):
+                try:
+                    filename = os.path.join(root, file)
+                    # print("Parsing %s" % (filename))
+                    tree = ET.parse(filename)
+                    fileroot = tree.getroot()
 
-                cblinput = fileroot.findall("./Books/Book")
+                    cblinput = fileroot.findall("./Books/Book")
 
-                readingList = ReadingList(
-                    file, datasource.CBLSource(file, filename), cvCache)
+                    readingList = ReadingList(
+                        file, datasource.CBLSource(file, filename), cvCache)
 
-                i = 0
-                printResults("Updating issue data for reading list : %s [%s]" % (
-                    readingList.name, readingList.source.type), 3)
+                    i = 0
+                    printResults("Updating issue data for reading list : %s [%s]" % (
+                        readingList.name, readingList.source.type), 3)
 
-                for entry in cblinput:
-                    i += 1
-                    # ,'issueYear':entry.attrib['Year']}
-                    seriesName = entry.attrib['Series']
-                    seriesStartYear = entry.attrib['Volume']
-                    curSeries = Series.getSeries(seriesName, seriesStartYear)
-                    curIssue = curSeries.getIssue(entry.attrib['Number'])
-                    for series in Series.seriesList:
-                        print("%s (%s) [%s]" % (series.name,
-                              series.startYear, series.id))
-                        for issue in series.issueList:
-                            print("#%s [%s]" % (issue.issueNumber, issue.id))
-                    readingList.addIssue(curIssue, i)
-                if len(readingList.issueList) == 0:
-                    printResults(
-                        "Warning: No issues found for list : %s" % (file), 4)
+                    for entry in cblinput:
+                        i += 1
+                        curSeries = None
+                        # ,'issueYear':entry.attrib['Year']}
+                        seriesName = entry.attrib['Series']
+                        seriesStartYear = entry.attrib['Volume']
+                        curSeries = Series.getSeries(seriesName, seriesStartYear)
+                        curIssue = curSeries.getIssue(entry.attrib['Number'])
+                        #for series in Series.seriesList:
+                        #    print("%s (%s) [%s]" % (series.name,
+                        #          series.startYear, series.id))
+                        #    for issue in series.issueList:
+                        #        print("#%s [%s]" % (issue.issueNumber, issue.id))
+                        readingList.addIssue(curIssue, i)
+                    if len(readingList.issueList) == 0:
+                        printResults(
+                            "Warning: No issues found for list : %s" % (file), 4)
 
-                readingLists.append(readingList)
-                #except Exception as e:
-                #    printResults("Unable to process file at %s" %
-                #                 (os.path.join(str(root), str(file))), 3)
-                #    printResults(repr(e), 3)
+                    readingLists.append(readingList)
+                except Exception as e:
+                    printResults("Unable to process file at %s" %
+                                 (os.path.join(str(root), str(file))), 3)
+                    printResults(repr(e), 3)
 
     return readingLists
 
@@ -97,7 +98,7 @@ def getOnlineLists(cvCache):
             # Get all reading list entries from readinglist DB table
             curListDetails = curDB.getListDetails(curReadingList.id)
 
-            issueList = []
+            #issueList = []
 
             # Get details for each list entry from issue DB table
             for listEntry in curListDetails:

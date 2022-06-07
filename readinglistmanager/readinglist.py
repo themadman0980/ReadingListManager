@@ -47,8 +47,6 @@ class ReadingList:
         seriesSet = set()
 
         for issue in self.issueList:
-            print("Issue: %s (%s) #%s - #%s" % (issue.series.name,
-                  issue.series.startYear, issue.issueNumber, issue.listNumber))
             if issue.hasValidID():
                 issuesMatched += 1
             seriesSet.add(issue.series)
