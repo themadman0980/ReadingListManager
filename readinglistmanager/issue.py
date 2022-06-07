@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import readinglistmanager
 from readinglistmanager.utilities import printResults
+from readinglistmanager import utilities
 
 
 class Issue:
@@ -42,20 +43,60 @@ class Issue:
         return hash((self.series.nameClean, self.series.startYearClean, self.issueNumber, self.id))
 
     @classmethod
-    def addToDB(connection, number, issueID, seriesID, name, coverDate):
-        pass
+    def addToDB(self,cvCache, issue, series):
+        dbCursor = cvCache.connection.cursor()
 
-    def validate(self, cvCacheConnection):
+        dateAdded = utilities.getTodaysDate()
+        coverDate = utilities.parseDate(issue.cover_date)
+        checkIssueQuery = ''' SELECT * FROM cv_issues WHERE IssueID=%s ''' % (
+            issue.id_)
+        checkResults = dbCursor.execute(checkIssueQuery).fetchall()
+
+        if len(checkResults) > 0:
+            # Match already exists!
+            print("Issue %s [%s] from series %s already exists in the DB!" % (
+                issue.number, issue.id_, series.id))
+        elif issue.number is not None and str(issue.id_).isdigit():
+            #try:
+            if issue.name or issue.coverDate:
+                if issue.name and issue.coverDate:
+                    # Both!
+                    issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,Name,CoverDate,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, issue.name, coverDate, dateAdded)
+                elif issue.name:
+                    # name only
+                    issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,Name,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, issue.name, dateAdded)
+                else:
+                    # coverDate only
+                    issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,CoverDate,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, coverDate, dateAdded)
+
+            else:
+                issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,DateAdded)
+                                    VALUES (\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, dateAdded)
+
+            # Only add issues with CV match!
+            dbCursor.execute(issueQuery)
+            connection.commit()
+            #except Exception as e:
+            #    print("Unable to process issue for %s : %s [%s]" % (
+            #        issue.series.id, issue.number, issue.id))
+            #    print(e)
+
+        dbCursor.close()
+
+    def validate(self, cvCache):
         if not self.hasValidID() and not self.checkedDB:
             # Check DB for issue ID match
-            self.findDBIssueID(cvCacheConnection)
+            self.findDBIssueID(cvCache)
 
-    def findDBIssueID(self, cvCacheConnection):
+    def findDBIssueID(self, cvCache):
 
         lookupMatches = []
         if self.series.hasValidID():
             try:
-                dbCursor = cvCacheConnection.cursor()
+                dbCursor = cvCache.connection.cursor()
                 lookupIssuesQuery = ''' SELECT * FROM cv_issues WHERE VolumeID=\"%s\" AND IssueNumber=\"%s\" ''' % (
                     self.series.id, self.issueNumber)
                 # printResults("Looking up series: %s (%s)" % (nameClean, year), 3)

@@ -4,7 +4,7 @@
 from readinglistmanager import utilities
 from readinglistmanager.utilities import printResults
 from readinglistmanager import config
-import time
+from readinglistmanager.db import CVDB
 from readinglistmanager.issue import Issue
 
 _seriesList = []
@@ -47,9 +47,51 @@ class Series:
             return newSeries
 
     @classmethod
-    def validateAll(self, cvCacheConnection, cvSession):
+    def addToDB(self,series):
+
+        dbCursor = Series.cvCache.connection.cursor()
+        checkVolumeQuery = ''' SELECT * FROM cv_volumes WHERE VolumeID=%s ''' % (series.id)
+        checkResults = dbCursor.execute(checkVolumeQuery).fetchall()
+
+        if len(checkResults) > 0:
+            # Match already exists!
+            printResults("Series %s (%s) [%s] already exists in the DB!" % (name, startYear, seriesID))
+        elif isinstance(series,Series) and series.hasValidID():
+            dateAdded = utilities.getTodaysDate()
+            #try:
+            if series.numIssues or series.publisher:
+                if series.numIssues and series.publisher:
+                    # Both!
+                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
+                elif series.numIssues:
+                    # NumIssues only
+                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, dateAdded)
+                else:
+                    # Publisher only
+                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,Publisher,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.publisher, dateAdded)
+            else:
+                volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
+
+            # Only add issues with CV match!
+            dbCursor.execute(volumeQuery)
+            Series.cvCache.connection.commit()
+
+            #except Exception as e:
+            #    print("Unable to process series : %s (%s) [%s]" % (name, startYear, seriesID))
+            #    print(e)
+
+        dbCursor.close()
+
+
+
+    @classmethod
+    def validateAll(self):
         for series in _seriesList:
-            series.validate(cvCacheConnection, cvSession)
+            series.validate()
 
     @classmethod
     def getCleanName(self, name):
@@ -76,21 +118,25 @@ class Series:
 
         # Summary of results:
         printResults("Series: %s" % (Series.count), 2, True)
+        printResults("DB Searches: %s, CV Searches = %s" %
+                (Series.dbCounters['SearchCount'], Series.cvCounters['SearchCount']), 3)
         printResults("Number of series matched: %s / %s" %
                      (seriesMatched, seriesCount), 3)
         printResults("Number of series complete: %s / %s" %
                      (seriesComplete, seriesCount), 3)
-#        printResults("Match (DB) = %s / %s" %
-#                     (Series.dbCounters['Found'], Series.count), 3)  # One match
-#        printResults("Match (CV-Single) = %s" %
-#                     (Series.cvMatchTypes['OneMatch']), 3)  # One match
-#        printResults("Match (CV-Multiple) = %s" %
-#                     (Series.cvMatchTypes['MultipleMatch']), 3)  # Multiple series matches
-#        # Blacklist publisher matches only
-#        printResults("No Match (CV-Blacklist) = %s" %
-#                     (Series.cvMatchTypes['BlacklistOnlyMatch']), 3)
-#        printResults("No Match (Unfound) = %s / %s" %
-#                     (Series.cvMatchTypes['NoMatch'], Series.count), 3)  # No cv matches
+        printResults("Match (DB) = %s / %s" %
+                     (Series.dbCounters['Found'], Series.count), 3)  # One match
+        printResults("No Match (DB) = %s / %s" %
+                     (Series.dbCounters['NotFound'], Series.count), 3)  # One match
+        printResults("Match (CV-Single) = %s / %s" %
+                     (Series.cvMatchTypes['OneMatch'], Series.count), 3)  # One match
+        printResults("Match (CV-Multiple) = %s / %s" %
+                     (Series.cvMatchTypes['MultipleMatch'], Series.count), 3)  # Multiple series matches
+        # Blacklist publisher matches only
+        printResults("No Match (CV-Blacklist) = %s / %s" %
+                     (Series.cvMatchTypes['BlacklistOnlyMatch'], Series.count), 3)
+        printResults("No Match (Unfound) = %s / %s" %
+                     (Series.cvMatchTypes['NoMatch'], Series.count), 3)  # No cv matches
 
     def __init__(self, curName, curStartYear, curID=None, curPublisher=None, curNumIssues=None, curDateAdded=None, curIssueList=None):
         self._name = curName
@@ -107,7 +153,6 @@ class Series:
         self.checkedCVVolumes = False
         self.checkedCVIssues = False
         self.checkedDB = False
-        self.cvResults = None
 
         Series.count += 1
 
@@ -141,13 +186,13 @@ class Series:
 
         return newIssue
 
-    def validate(self, cvCacheConnection, cvSession):
+    def validate(self):
         if not self.hasValidID() and not self.checkedDB:
             if config.verbose:
                 printResults("Validating series : %s (%s) [%s]" % (
                     self.name, self.startYear, self.id), 3)
             # ID missing and DB hasn't been checked yet
-            self.findDBSeriesID(cvCacheConnection)
+            self.findDBSeriesID()
 
             #if self.hasValidID():
             #self.findDBIssueIDs(cvCacheConnection)
@@ -157,21 +202,26 @@ class Series:
 
         if not self.hasValidID():
             # No match found in DB - check CV
-            self.findCVSeriesID(cvCacheConnection, cvSession)
+            self.findCVSeriesID()
 
-            # If a new id match was found, check for issues on CV
+            # If a new series id match was found in CV, check for volume issue details on CV
             if self.hasValidID():
-                self.findCVIssueID(cvCacheConnection, cvSession)
+                self.findCVIssueID()
 
-        # Check if issues exist in DB
-        for issue in self.issueList:
-            issue.validate(cvCacheConnection)
+        for issue in self.issueList:                
+            # Check if issues exist in DB
+            issue.validate(Series.cvCache)
 
-    def findDBSeriesID(self, cvCacheConnection):
+            # If no matching issue was found in the DB
+            if issue.id is None:
+                self.findCVIssueID()
+                issue.validate(Series.cvCache)
+
+    def findDBSeriesID(self):
         lookupMatches = []
         Series.dbCounters['SearchCount'] += 1
         try:
-            dbCursor = cvCacheConnection.cursor()
+            dbCursor = Series.cvCache.connection.cursor()
             lookupVolumeQuery = ''' SELECT * FROM cv_volumes WHERE NameClean=\"%s\" AND StartYear=\"%s\" ''' % (
                 self.nameClean, self.startYearClean)
             if config.verbose:
@@ -202,39 +252,28 @@ class Series:
 
         self.checkedDB = True
 
-    def findCVIssueID(self, cvCacheConnection, CVSession):
+    def findCVIssueID(self):
         if self.hasValidID() and not self.checkedCVIssues and config.CV.check_issues:
-            try:
-                time.sleep(utilities.getCVSleepTimeRemaining())
-                results = CVSession.issue_list(
-                    params={"filter": "volume:%s" % (self.id)})
-            except Exception as e:
-                printResults(
-                    "There was an error processing CV search for issues for [%s]" % (self.id), 4)
-                printResults(e, 4)
+            Series.cvCounters['SearchCount'] += 1
+
+            if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+                printResults("Info: Searching CV for issues : %s (%s) [%s]" % (self.name,self.startYear,self.id),4)
+
+            results = Series.cvCache.findIssueMatches(self.id)
 
             for issue in results:
-                # CV API format for results
-                number = issue.number
-                issueID = issue.id
-                name = issue.name
-                coverDate = issue.cover_date
-
-                if issueID is not None and str(issueID).isdigit() and number is not None:
-                    Issue.addToDB(number, issueID, self.ID, name, coverDate)
+                curIssue = self.getIssue()
+                if issue.id_ is not None and str(issue.id_).isdigit() and issue.number is not None:
+                    Issue.addToDB(Series.cvCache,issue,self)
 
             self.checkedCVIssues = True
 
-    def findCVSeriesID(self, dbConnection, cvSession):
+    def findCVSeriesID(self):
         numVolumeResults = 0
         numVolumeMatches = 0
-        numCVMatchOne = 0
-        numCVMatchMultiple = 0
-        numCVNoMatchBlacklist = 0
-        numCVNoMatch = 0
 
         # TODO: FIX
-        if config.CV.check_volumes:
+        if config.CV.check_volumes and self.name is not None:
             Series.cvCounters['SearchCount'] += 1
 
             results = []
@@ -243,85 +282,83 @@ class Series:
             allowed_matches = []
             preferred_matches = []
 
-            try:
-                if config.verbose:
-                    printResults("Searching for Volume : %s (%s) on CV" %
-                                 (self.name, self.startYear), 4)
-                if self.name is not None:
-                    time.sleep(utilities.getCVSleepTimeRemaining())
-                    self.cvResults = cvSession.volume_list(
-                        params={"filter": "name:%s" % (self.name)})
+            #try:
+            if config.verbose:
+                printResults("Searching for Volume : %s (%s) on CV" %
+                                (self.name, self.startYear), 4)
+            
+            if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+                printResults("Info: Searching CV for series : %s (%s)" % (self.name,self.startYear),4)
+            cvResults = Series.cvCache.findVolumeMatches(self.name)
 
-                numVolumeResults = len(self.cvResults)
+            if cvResults is None or len(cvResults) == 0:
+                printResults("No matches found for %s (%s)" %
+                                (self.name, self.startYear), 4)
+                Series.cvMatchTypes['NoMatch'] += 1
+            else:  # Results were found
+                for result in cvResults:  # Iterate through CV results
+                    resultNameClean = utilities.cleanNameString(
+                        result.name)
+                    resultYearClean = utilities.cleanYearString(
+                        result.start_year)
+                    # If exact series name and year match
+                    if config.verbose: printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
+                        resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
+                    if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
+                        # Add result to lists
+                        series_matches.append(result)
+                        curPublisher = result.publisher.name
 
-                if self.cvResults is None or numVolumeResults == 0:
-                    printResults("No matches found for %s (%s)" %
-                                 (self.name, self.startYear), 4)
-                    numCVNoMatch += 1
-                else:  # Results were found
-                    for result in self.cvResults:  # Iterate through CV results
-                        resultNameClean = utilities.cleanNameString(
-                            result.name)
-                        resultYearClean = utilities.cleanYearString(
-                            result.start_year)
-                        # If exact series name and year match
-                        printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
-                            resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 4)
-                        if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
-                            # Add result to lists
-                            series_matches.append(result)
-                            curPublisher = result.publisher.name
-
-                            if curPublisher in config.CV.publisher_blacklist:
-                                blacklist_matches.append(result)
-                            elif curPublisher in config.CV.publisher_preferred:
-                                preferred_matches.append(result)
-                            else:
-                                allowed_matches.append(result)
-
-                    numVolumeMatches = len(
-                        series_matches) - len(blacklist_matches)
-                    if numVolumeMatches < 0:
-                        numVolumeMatches = 0
-
-                    if len(series_matches) == 0:
-                        numCVNoMatch += 1
-                        if config.verbose:
-                            printResults("No exact matches found for %s (%s)" %
-                                         (self.name, self.year), 4)
-                    elif len(series_matches) == 1:
-                        # One match
-                        if len(blacklist_matches) > 0:
-                            numCVNoMatchBlacklist += 1
-                            printResults("No valid results found for %s (%s). %s blacklisted results found with the following publishers: %s" % (
-                                self.name, self.year, len(blacklist_matches), ",".join(blacklist_matches)), 5)
+                        if curPublisher in config.CV.publisher_blacklist:
+                            blacklist_matches.append(result)
+                        elif curPublisher in config.CV.publisher_preferred:
+                            preferred_matches.append(result)
                         else:
-                            numCVMatchOne += 1
-                            results = series_matches
+                            allowed_matches.append(result)
+
+                numVolumeMatches = len(
+                    series_matches) - len(blacklist_matches)
+                if numVolumeMatches < 0:
+                    numVolumeMatches = 0
+
+                if len(series_matches) == 0:
+                    Series.cvMatchTypes['NoMatch'] += 1
+                    if config.verbose:
+                        printResults("No exact matches found for %s (%s)" %
+                                        (self.name, self.startYear), 4)
+                elif len(series_matches) == 1:
+                    # One match
+                    if len(blacklist_matches) > 0:
+                        Series.cvMatchTypes['BlacklistOnlyMatch'] += 1
+                        printResults("No valid results found for %s (%s). %s blacklisted results found with the following publishers: %s" % (
+                            self.name, self.startYear, len(blacklist_matches), ",".join(blacklist_matches)), 5)
                     else:
-                        # Multiple matches
-                        numCVMatchMultiple += 1
-                        publishers = set(
-                            [vol.publisher.name for vol in series_matches])
-                        printResults("Warning: Multiple CV matches found! Publishers: %s" % (
-                            ", ".join(publishers)), 5)
-                        if len(preferred_matches) > 0:
-                            results = preferred_matches
-                        elif len(allowed_matches) > 0:
-                            results = allowed_matches
-                        else:
-                            printResults("No valid results found for %s (%s). %s blacklisted results found." % (
-                                self.name, self.year, len(blacklist_matches)), 5)
+                        Series.cvMatchTypes['OneMatch'] += 1
+                        results = series_matches
+                else:
+                    # Multiple matches
+                    Series.cvMatchTypes['MultipleMatch'] += 1
+                    publishers = set(
+                        [vol.publisher.name for vol in series_matches])
+                    printResults("Warning: Multiple CV matches found! Publishers: %s" % (
+                        ", ".join(publishers)), 5)
+                    if len(preferred_matches) > 0:
+                        results = preferred_matches
+                    elif len(allowed_matches) > 0:
+                        results = allowed_matches
+                    else:
+                        printResults("No valid results found for %s (%s). %s blacklisted results found." % (
+                            self.name, self.startYear, len(blacklist_matches)), 5)
 
-                    printResults("CV : Results = %s; Matches = %s" %
-                                 (numVolumeResults, numVolumeMatches), 4)
+                printResults("CV : Results = %s; Matches = %s" %
+                                (numVolumeResults, numVolumeMatches), 4)
 
-                    self.processCVResults(results)
+                self.processCVResults(results)
 
-            except Exception as e:
-                printResults("There was an error processing Volume search for %s (%s)" % (
-                    self.name, self.year), 4)
-                printResults(e, 4)
+            #except Exception as e:
+            #    printResults("There was an error processing Volume search for %s (%s)" % (
+            #        self.name, self.startYear), 4)
+            #    printResults(e, 4)
 
         self.checkedCVVolumes = True
 
@@ -333,11 +370,12 @@ class Series:
             for result in results:
                 curNumIssues = result.issue_count
                 curPublisher = result.publisher.name
-                curID = result.id
+                curID = result.id_
                 curName = result.name
                 curYear = result.start_year
 
-                curSeries = Series.getSeries(curName, curYear, curID)
+                curSeries = Series.getSeries(curName, curYear)
+                curSeries.id = curID
                 curSeries.publisher = curPublisher
                 curSeries.numIssues = curNumIssues
 

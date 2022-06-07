@@ -7,19 +7,16 @@ import os
 from datetime import datetime
 from . import filemanager
 
+dateFormat = '%Y-%m-%d'
+
 def getCurrentTimeStamp():
     return int(round(datetime.now().timestamp()))
 
-
 def getTodaysDate():
-    return datetime.today().strftime('%Y-%m-%d')
+    return datetime.today().strftime(dateFormat)
 
-
-def getCVSleepTimeRemaining(timestamp_last_used, api_access_rate):
-    #get time since last CV API call
-    timeDif = getCurrentTimeStamp() - timestamp_last_used
-    return max(0, api_access_rate - timeDif)
-
+def parseDate(dateString):
+    return datetime.strftime(dateObject, dateFormat)
 
 def stripAccents(s):
     # Converts accented letters to their basic english counterpart

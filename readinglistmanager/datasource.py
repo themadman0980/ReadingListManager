@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 from readinglistmanager import utilities
 from readinglistmanager.utilities import printResults
-import os
-
+from readinglistmanager import config
+import os, time
 
 class Source:
     def __init__(self, name, file, sourceType):
@@ -69,6 +69,7 @@ class CBLSource(Source):
 
 
 class CVSource(Source):
+
     def __init__(self, name, file):
         super().__init__(name, file, "CV")
         self._tableIssueDetails = 'cv_issues'
@@ -100,7 +101,6 @@ class CVSource(Source):
             del self._tableIssueDetails
         return locals()
     tableIssueDetails = property(**tableIssueDetails())
-
 
 class OnlineSource(Source):
     def __init__(self, name, file, tableDict):

@@ -6,10 +6,6 @@ from readinglistmanager.filemanager import files
 from readinglistmanager.series import Series
 from readinglistmanager.issue import Issue
 from readinglistmanager.readinglist import ReadingList
-#from simyan.session import Session
-
-cvSession = None #Session(api_key=config.CV.api_key)
-CV_LAST_USED = utilities.getCurrentTimeStamp()
 
 
 def main():
@@ -17,6 +13,7 @@ def main():
 
     cvSource = datasource.CVSource("CV", files.cvCache)
     cvCache = db.CVDB(cvSource)
+    Series.cvCache = cvCache
 
     printResults("Reading data from sources...", 1, True)
     readingLists = []
@@ -40,7 +37,7 @@ def main():
 
     printResults("Validating data...", 1, True)
 
-    Series.validateAll(cvCache.connection, cvSession)
+    Series.validateAll()
 
     printResults("Summarising results...", 1, True)
 
