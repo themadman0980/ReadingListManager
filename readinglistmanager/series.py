@@ -364,7 +364,6 @@ class Series:
         return False
 
     def hasCompleteIssueList(self):
-        print("'%s' == '%s'" % (len(self.issueList), self.numIssues))
         if self.issueList is not None and self.numIssues is not None:
             return len(self.issueList) == self.numIssues
 

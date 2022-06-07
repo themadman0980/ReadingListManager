@@ -1,4 +1,3 @@
-readinglistmanager/__pycache__
-ReadingLists/*
-Results/*
-readinglistmanager/__pycache__/*
+ReadingLists/
+Results/
+readinglistmanager/__pycache__/
