@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from utilities import printResults
+from readinglistmanager import utilities
+from readinglistmanager.utilities import printResults
 import os
 
 

@@ -1,0 +1,6 @@
+
+
+	Initialising...
+		Checking if source file exists: /config/workspace/ReadingListManager/Data/cv.db [CV]
+
+	Reading data from sources...

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import datasource
-from utilities import printResults
+import readinglistmanager
+from readinglistmanager.utilities import printResults
 import os
-from issue import Issue, ReadingListIssue
-import config
+from readinglistmanager.issue import Issue, ReadingListIssue
+from readinglistmanager import config
 
 
 class ReadingList:

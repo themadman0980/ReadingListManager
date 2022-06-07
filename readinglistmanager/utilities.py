@@ -5,14 +5,7 @@ import unicodedata  # Needed to strip character accents
 import re
 import os
 from datetime import datetime
-
-timeString = datetime.today().strftime("%y%m%d%H%M%S")
-
-scriptDirectory = os.getcwd()
-rootDirectory = os.path.dirname(scriptDirectory)
-resultsDirectory = os.path.join(rootDirectory, "Results")
-resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (timeString))
-
+from . import filemanager
 
 def getCurrentTimeStamp():
     return int(round(datetime.now().timestamp()))
@@ -54,7 +47,7 @@ def cleanYearString(string):
 
 
 def printResults(string, indentation, lineBreak=False, replace=False):
-    with open(resultsFile, mode='a') as file:
+    with open(filemanager.files.resultsFile, mode='a') as file:
         if not replace:
             if lineBreak:
                 print("")

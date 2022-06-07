@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from utilities import printResults
+import readinglistmanager
+from readinglistmanager.utilities import printResults
 
 
 class Issue:

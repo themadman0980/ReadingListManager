@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from utilities import printResults
-import utilities
-from datasource import Source, OnlineSource, CVSource
+from readinglistmanager import utilities,config
+from readinglistmanager.utilities import printResults
+from readinglistmanager.datasource import Source, OnlineSource, CVSource
+from readinglistmanager.series import Series
 import sqlite3
-import config
-from series import Series
 
 dbConnectionList = []
 

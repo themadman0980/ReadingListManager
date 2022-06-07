@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import utilities
-from utilities import printResults
-import config
+from readinglistmanager import utilities
+from readinglistmanager.utilities import printResults
+from readinglistmanager import config
 import time
-from issue import Issue
+from readinglistmanager.issue import Issue
 
 
 class Series:

@@ -4,8 +4,8 @@ import configparser
 import os
 
 scriptDirectory = os.getcwd()
-rootDirectory = os.path.dirname(scriptDirectory)
-configFile = os.path.join(rootDirectory, 'config.ini')
+#rootDirectory = os.path.dirname(scriptDirectory)
+configFile = os.path.join(scriptDirectory, 'config.ini')
 config = configparser.ConfigParser()
 config.read(configFile)
 

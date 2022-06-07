@@ -1,0 +1,19 @@
+
+
+	Initialising...
+		Checking if source file exists: /config/workspace/ReadingListManager/Data/cv.db [CV]
+
+	Reading data from sources...
+		Checking CBL files in /config/workspace/ReadingListManager/ReadingLists
+			Updating issue data for reading list : 053 Marvel Master Reading Order Pt 8 (2005-2009) [CBL]
+				No existing series instance found for X-Force (2008)
+					No existing issue instance found for X-Force (2008) #7 [None]
+					No existing issue instance found for X-Force (2008) #8 [None]
+				No existing series instance found for Silver Surfer: In Thy Name (2008)
+					No existing issue instance found for Silver Surfer: In Thy Name (2008) #1 [None]
+					No existing issue instance found for Silver Surfer: In Thy Name (2008) #2 [None]
+					No existing issue instance found for Silver Surfer: In Thy Name (2008) #3 [None]
+					No existing issue instance found for Silver Surfer: In Thy Name (2008) #4 [None]
+		1 reading lists found from 1 source files
+
+	Validating data...

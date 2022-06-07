@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from filemanager import files as fileManager
-from utilities import printResults
+import readinglistmanager
+from readinglistmanager import filemanager,datasource
+from readinglistmanager.utilities import printResults
 import os
-import datasource
-import db
-import config
-from readinglist import ReadingList
-from series import Series
-from issue import Issue
+from readinglistmanager.readinglist import ReadingList
+from readinglistmanager.series import Series
+from readinglistmanager.issue import Issue
 import xml.etree.ElementTree as ET
 
 readingListDB = [
@@ -25,8 +23,8 @@ def parseCBLfiles(cvCache):
     readingLists = []
 
     printResults("Checking CBL files in %s" %
-                 (fileManager.readingListDirectory), 2)
-    for root, dirs, files in os.walk(fileManager.readingListDirectory):
+                 (filemanager.files.readingListDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.files.readingListDirectory):
         for file in files:
             if file.endswith(".cbl"):
                 #try:
@@ -78,7 +76,7 @@ def getOnlineLists(cvCache):
         # Create Source object
         sourceName = listSourceObject['SourceName']
         sourceFile = os.path.join(
-            fileManager.dataDirectory, sourceName + ".db")
+            filemanager.files.dataDirectory, sourceName + ".db")
         sourceTable = listSourceObject['DBTables']
 
         curSource = datasource.OnlineSource(

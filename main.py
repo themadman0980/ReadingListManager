@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from utilities import printResults
-import utilities
-import importer
-import datasource
-import db
-import config
-from issue import Issue
-from series import Series
-from readinglist import ReadingList
-from filemanager import files
-from simyan.session import Session
+from readinglistmanager.utilities import printResults
+from readinglistmanager import utilities,importer,datasource,db,config
+from readinglistmanager.filemanager import files
+from readinglistmanager.series import Series
+from readinglistmanager.issue import Issue
+from readinglistmanager.readinglist import ReadingList
+#from simyan.session import Session
 
-cvSession = Session(api_key=config.CV.api_key)
+cvSession = None #Session(api_key=config.CV.api_key)
 CV_LAST_USED = utilities.getCurrentTimeStamp()
 
 
@@ -52,5 +48,5 @@ def main():
     Series.printSummaryResults()
     Issue.printSummaryResults()
 
-
-main()
+if __name__ == "__main__":
+    main()
