@@ -8,6 +8,7 @@ from readinglistmanager.db import CVDB
 from readinglistmanager.issue import Issue
 
 _seriesList = []
+_seriesRef = {} # Dictionary of all names
 
 class Series:
 
@@ -171,7 +172,7 @@ class Series:
 
     def getIssue(self, issueNumber=None, id=None):
         if issueNumber is None and id is None:
-            printResults("Warning: Invalid issue details for #%s [%s]" % (issueNumber,id),5)
+            printResults("Warning: Invalid issue details for #%s [%s]" % (issueNumber,id),4)
             return
         else:
             # Match issue from ID
