@@ -7,8 +7,7 @@ from readinglistmanager import config
 from readinglistmanager.db import CVDB
 from readinglistmanager.issue import Issue
 
-_seriesList = []
-_seriesRef = {}  # Dictionary of all names
+_seriesList = {}  # Set of all series
 
 
 class Series:
@@ -21,36 +20,22 @@ class Series:
     cvCache = None
 
     @classmethod
-    def getSeries(self, name=None, startYear=None, id=None):
-        if (name is None or startYear is None) and id is None:
-            printResults("Warning: Invalid series details for %s (%s) [%s]" % (
-                name, startYear, id), 5)
-            return
-        else:
-            # Look for series by ID
-            if id is not None and str(id).isdigit():
-                # Check if there is an existing match for this id
-                for series in _seriesList:
-                    if series.id == id:
-                        return series
+    def getSeries(self, name, startYear):
+        if None not in (name, startYear):
+            seriesKey = Series.getKey(name, startYear)
 
-                # No match! Create series from ID
-                newSeries = Series(None, None, id)
-                _seriesList.append(newSeries)
-
-                return newSeries
-            # Look for series by name + startYear
-            elif name is not None and name != "" and startYear is not None:
-                # Check if there is an existing match for this id
-                for series in _seriesList:
-                    if series.nameClean == Series.getCleanName(name) and series.startYearClean == Series.getCleanStartYear(startYear):
-                        return series
-
+            if seriesKey in _seriesList:
+                # Match for key found in ist
+                return _seriesList.get(seriesKey)
+            else:
                 # No match! Create series from ID
                 newSeries = Series(name, startYear)
-                _seriesList.append(newSeries)
-
+                _seriesList[seriesKey] = newSeries
                 return newSeries
+        else:
+            printResults("Warning: Invalid series details for %s (%s)" % (
+                name, startYear), 5)
+            return None
 
     @classmethod
     def addToDB(self, series):
@@ -96,7 +81,7 @@ class Series:
 
     @classmethod
     def validateAll(self):
-        for series in _seriesList:
+        for key, series in _seriesList.items():
             series.validate()
 
     @classmethod
@@ -116,7 +101,7 @@ class Series:
         seriesComplete = 0
         seriesCount = len(_seriesList)
 
-        for series in _seriesList:
+        for key, series in _seriesList.items():
             if series.hasValidID():
                 seriesMatched += 1
             if series.hasCompleteIssueList():
@@ -152,6 +137,7 @@ class Series:
         self._numIssues = curNumIssues
         self._dateAdded = curDateAdded
         self._issueList = curIssueList
+        self._getKey()
         if self._issueList is None:
             self._issueList = []
         self._nameClean = Series.getCleanName(curName)
@@ -172,6 +158,16 @@ class Series:
 
     def __hash__(self):
         return hash((self.nameClean, self.startYearClean))
+
+    def _getKey(self):
+        self.key = Series.getKey(self.name, self.startYear)
+
+    @classmethod
+    def getKey(self, seriesName, seriesStartYear):
+        if None not in (seriesName, seriesStartYear):
+            return "%s-%s" % (utilities.getDynamicName(seriesName), utilities.cleanYearString(seriesStartYear))
+        else:
+            return None
 
     def getIssue(self, issueNumber=None, id=None):
         if issueNumber is None and id is None:
