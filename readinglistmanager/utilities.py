@@ -8,6 +8,10 @@ from datetime import datetime
 from . import filemanager
 
 dateFormat = '%Y-%m-%d'
+dynamicNameTemplate = '[^a-zA-Z0-9]'
+stop_words = ['the', 'a', 'and']
+yearStringCleanTemplate = '[^0-9]'
+cleanStringTemplate = '[^a-zA-Z0-9 ]'
 
 def getCurrentTimeStamp():
     return int(round(datetime.now().timestamp()))
@@ -16,29 +20,27 @@ def getTodaysDate():
     return datetime.today().strftime(dateFormat)
 
 def parseDate(dateString):
-    return datetime.strftime(dateObject, dateFormat)
+    return datetime.strftime(dateString, dateFormat)
 
 def stripAccents(s):
     # Converts accented letters to their basic english counterpart
     s = str(s)
     return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
+def stripSymbols(string):
+    return re.sub(cleanStringTemplate, '', str(string))
 
-def cleanNameString(string):
-    nameStringCleanTemplate = '[^a-zA-Z0-9]'
-    stop_words = ['the', 'a', 'and']
-
+def getDynamicName(string):
     string = str(string)
     string = stripAccents(string.lower())
     cleanString = " ".join([word for word in str(
         string).split() if word not in stop_words])
-    cleanString = re.sub(nameStringCleanTemplate, '', str(cleanString))
+    cleanString = re.sub(dynamicNameTemplate, '', str(cleanString))
 
     return cleanString
 
 
 def cleanYearString(string):
-    yearStringCleanTemplate = '[^0-9]'
     cleanString = re.sub(yearStringCleanTemplate, '', str(string))
     return cleanString
 

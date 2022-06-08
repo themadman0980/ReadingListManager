@@ -51,8 +51,9 @@ def parseCBLfiles(cvCache):
                         # ,'issueYear':entry.attrib['Year']}
                         seriesName = entry.attrib['Series']
                         seriesStartYear = entry.attrib['Volume']
+                        issueNumber = entry.attrib['Number']
                         curSeries = Series.getSeries(seriesName, seriesStartYear)
-                        curIssue = curSeries.getIssue(entry.attrib['Number'])
+                        curIssue = curSeries.getIssue(issueNumber)
                         #for series in Series.seriesList:
                         #    print("%s (%s) [%s]" % (series.name,
                         #          series.startYear, series.id))

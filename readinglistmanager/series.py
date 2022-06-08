@@ -21,30 +21,34 @@ class Series:
 
     @classmethod
     def getSeries(self,name=None, startYear=None, id=None):
-        # Look for series by ID
-        if id is not None and str(id).isdigit():
-            # Check if there is an existing match for this id
-            for series in _seriesList:
-                if series.id == id:
-                    return series
+        if (name is None or startYear is None) and id is None:
+            printResults("Warning: Invalid series details for %s (%s) [%s]" % (name, startYear,id),5)
+            return
+        else:
+            # Look for series by ID
+            if id is not None and str(id).isdigit():
+                # Check if there is an existing match for this id
+                for series in _seriesList:
+                    if series.id == id:
+                        return series
 
-            # No match! Create series from ID
-            newSeries = Series(None, None, id)
-            _seriesList.append(newSeries)
+                # No match! Create series from ID
+                newSeries = Series(None, None, id)
+                _seriesList.append(newSeries)
 
-            return newSeries
-        # Look for series by name + startYear
-        elif name is not None and name != "" and startYear is not None:
-            # Check if there is an existing match for this id
-            for series in _seriesList:
-                if series.nameClean == Series.getCleanName(name) and series.startYearClean == Series.getCleanStartYear(startYear):
-                    return series
+                return newSeries
+            # Look for series by name + startYear
+            elif name is not None and name != "" and startYear is not None:
+                # Check if there is an existing match for this id
+                for series in _seriesList:
+                    if series.nameClean == Series.getCleanName(name) and series.startYearClean == Series.getCleanStartYear(startYear):
+                        return series
 
-            # No match! Create series from ID
-            newSeries = Series(name, startYear)
-            _seriesList.append(newSeries)
+                # No match! Create series from ID
+                newSeries = Series(name, startYear)
+                _seriesList.append(newSeries)
 
-            return newSeries
+                return newSeries
 
     @classmethod
     def addToDB(self,series):
@@ -86,8 +90,6 @@ class Series:
 
         dbCursor.close()
 
-
-
     @classmethod
     def validateAll(self):
         for series in _seriesList:
@@ -96,7 +98,7 @@ class Series:
     @classmethod
     def getCleanName(self, name):
         if name is not None and isinstance(name, str):
-            return utilities.cleanNameString(name)
+            return utilities.getDynamicName(name)
 
     @classmethod
     def getCleanStartYear(self, startYear):
@@ -168,54 +170,56 @@ class Series:
         return hash((self.nameClean, self.startYearClean))
 
     def getIssue(self, issueNumber=None, id=None):
-        # Match issue from ID
-        if id is not None and str(id).isdigit():
-            for issue in self.issueList:
-                if issue.id == id:
-                    return issue
+        if issueNumber is None and id is None:
+            printResults("Warning: Invalid issue details for #%s [%s]" % (issueNumber,id),5)
+            return
+        else:
+            # Match issue from ID
+            if id is not None and str(id).isdigit():
+                for issue in self.issueList:
+                    if issue.id == id:
+                        return issue
 
-        # Match issue from number
-        if issueNumber is not None:
-            for issue in self.issueList:
-                if issue.issueNumber == issueNumber:
-                    return issue
+            # Match issue from number
+            if issueNumber is not None:
+                for issue in self.issueList:
+                    if issue.issueNumber == issueNumber:
+                        return issue
 
-        # No match found. Create issue
-        newIssue = Issue(issueNumber, self, id)
-        self._issueList.append(newIssue)
+            # No match found. Create issue
+            newIssue = Issue(issueNumber, self, id)
+            self._issueList.append(newIssue)
 
-        return newIssue
+            return newIssue
 
     def validate(self):
         if not self.hasValidID() and not self.checkedDB:
-            if config.verbose:
-                printResults("Validating series : %s (%s) [%s]" % (
-                    self.name, self.startYear, self.id), 3)
+            if config.verbose: printResults("Validating series : %s (%s) [%s]" % (self.name, self.startYear, self.id), 3)
+            
             # ID missing and DB hasn't been checked yet
             self.findDBSeriesID()
 
             #if self.hasValidID():
             #self.findDBIssueIDs(cvCacheConnection)
 
-        if config.verbose:
-            printResults("DB match : %s" % (self.id), 4)
+            if config.verbose: printResults("DB match : %s" % (self.id), 4)
 
-        if not self.hasValidID():
-            # No match found in DB - check CV
-            self.findCVSeriesID()
+            if not self.hasValidID():
+                # No match found in DB - check CV
+                self.findCVSeriesID()
 
-            # If a new series id match was found in CV, check for volume issue details on CV
-            if self.hasValidID():
-                self.findCVIssueID()
+                # If a new series id match was found in CV, check for volume issue details on CV
+                if self.hasValidID():
+                    self.findCVIssueID()
 
-        for issue in self.issueList:                
-            # Check if issues exist in DB
-            issue.validate(Series.cvCache)
-
-            # If no matching issue was found in the DB
-            if issue.id is None:
-                self.findCVIssueID()
+            for issue in self.issueList:                
+                # Check if issues exist in DB
                 issue.validate(Series.cvCache)
+
+                # If no matching issue was found in the DB
+                if issue.id is None:
+                    self.findCVIssueID()
+                    issue.validate(Series.cvCache)
 
     def findDBSeriesID(self):
         lookupMatches = []
@@ -260,11 +264,17 @@ class Series:
                 printResults("Info: Searching CV for issues : %s (%s) [%s]" % (self.name,self.startYear,self.id),4)
 
             results = Series.cvCache.findIssueMatches(self.id)
+            if results is not None:
+                printResults("CV : Results = %s" % (len(results)), 5)
 
             for issue in results:
-                curIssue = self.getIssue()
-                if issue.id_ is not None and str(issue.id_).isdigit() and issue.number is not None:
-                    Issue.addToDB(Series.cvCache,issue,self)
+                curIssue = self.getIssue(issue.number,issue.id_)
+                curIssue.dateAdded = utilities.getTodaysDate()
+                curIssue.coverDate = utilities.parseDate(issue.cover_date)
+                curIssue.name = utilities.stripSymbols(issue.name)
+
+                if curIssue.hasValidID() and curIssue.issueNumber is not None:
+                    Issue.addToDB(Series.cvCache,curIssue,self)
 
             self.checkedCVIssues = True
 
@@ -281,6 +291,7 @@ class Series:
             blacklist_matches = []
             allowed_matches = []
             preferred_matches = []
+            cvResults = None
 
             #try:
             if config.verbose:
@@ -289,7 +300,7 @@ class Series:
             
             if CVDB.searchCount < config.Troubleshooting.api_query_limit:
                 printResults("Info: Searching CV for series : %s (%s)" % (self.name,self.startYear),4)
-            cvResults = Series.cvCache.findVolumeMatches(self.name)
+                cvResults = Series.cvCache.findVolumeMatches(self.name)
 
             if cvResults is None or len(cvResults) == 0:
                 printResults("No matches found for %s (%s)" %
@@ -297,7 +308,7 @@ class Series:
                 Series.cvMatchTypes['NoMatch'] += 1
             else:  # Results were found
                 for result in cvResults:  # Iterate through CV results
-                    resultNameClean = utilities.cleanNameString(
+                    resultNameClean = utilities.getDynamicName(
                         result.name)
                     resultYearClean = utilities.cleanYearString(
                         result.start_year)
@@ -316,8 +327,9 @@ class Series:
                         else:
                             allowed_matches.append(result)
 
-                numVolumeMatches = len(
-                    series_matches) - len(blacklist_matches)
+                numVolumeResults = len(cvResults)
+                numVolumeMatches = len(series_matches) - len(blacklist_matches)
+
                 if numVolumeMatches < 0:
                     numVolumeMatches = 0
 
@@ -350,8 +362,7 @@ class Series:
                         printResults("No valid results found for %s (%s). %s blacklisted results found." % (
                             self.name, self.startYear, len(blacklist_matches)), 5)
 
-                printResults("CV : Results = %s; Matches = %s" %
-                                (numVolumeResults, numVolumeMatches), 4)
+                printResults("CV : Results = %s; Matches = %s" % (numVolumeResults, numVolumeMatches), 5)
 
                 self.processCVResults(results)
 

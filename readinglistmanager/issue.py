@@ -3,6 +3,7 @@
 import readinglistmanager
 from readinglistmanager.utilities import printResults
 from readinglistmanager import utilities
+from readinglistmanager import config
 
 
 class Issue:
@@ -13,6 +14,8 @@ class Issue:
     idFound = 0
 
     def __init__(self, issueNumber, series, issueID=None, name=None, coverDate=None):
+        if issueNumber is None:
+            printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
         self._issueNumber = issueNumber
         self._series = series
         self._id = issueID
@@ -46,39 +49,37 @@ class Issue:
     def addToDB(self,cvCache, issue, series):
         dbCursor = cvCache.connection.cursor()
 
-        dateAdded = utilities.getTodaysDate()
-        coverDate = utilities.parseDate(issue.cover_date)
         checkIssueQuery = ''' SELECT * FROM cv_issues WHERE IssueID=%s ''' % (
-            issue.id_)
+            issue.id)
         checkResults = dbCursor.execute(checkIssueQuery).fetchall()
 
         if len(checkResults) > 0:
             # Match already exists!
             print("Issue %s [%s] from series %s already exists in the DB!" % (
-                issue.number, issue.id_, series.id))
-        elif issue.number is not None and str(issue.id_).isdigit():
+                issue.issueNumber, issue.id, series.id))
+        elif issue.hasValidID() and issue.issueNumber is not None:
             #try:
             if issue.name or issue.coverDate:
                 if issue.name and issue.coverDate:
                     # Both!
                     issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,Name,CoverDate,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, issue.name, coverDate, dateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id, series.id, issue.issueNumber, issue.name, issue.coverDate, issue.dateAdded)
                 elif issue.name:
                     # name only
                     issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,Name,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, issue.name, dateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id, series.id, issue.issueNumber, issue.name, issue.dateAdded)
                 else:
                     # coverDate only
                     issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,CoverDate,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, coverDate, dateAdded)
+                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id, series.id, issue.issueNumber, issue.coverDate, issue.dateAdded)
 
             else:
                 issueQuery = ''' INSERT INTO cv_issues (IssueID,VolumeID,IssueNumber,DateAdded)
-                                    VALUES (\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id_, series.id, issue.number, dateAdded)
+                                    VALUES (\"%s\",\"%s\",\"%s\",\"%s\")''' % (issue.id, series.id, issue.issueNumber, issue.dateAdded)
 
             # Only add issues with CV match!
             dbCursor.execute(issueQuery)
-            connection.commit()
+            cvCache.connection.commit()
             #except Exception as e:
             #    print("Unable to process issue for %s : %s [%s]" % (
             #        issue.series.id, issue.number, issue.id))
@@ -94,7 +95,7 @@ class Issue:
     def findDBIssueID(self, cvCache):
 
         lookupMatches = []
-        if self.series.hasValidID():
+        if self.series.hasValidID() and self.issueNumber is not None:
             try:
                 dbCursor = cvCache.connection.cursor()
                 lookupIssuesQuery = ''' SELECT * FROM cv_issues WHERE VolumeID=\"%s\" AND IssueNumber=\"%s\" ''' % (
@@ -117,8 +118,10 @@ class Issue:
                 self.name = lookupMatches[0][2]
                 self.coverDate = lookupMatches[0][3]
             else:
-                printResults("Warning: No matches found for %s (%s) #%s [%s]" % (
+                if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
                     self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
+        else:
+            printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (self.series.name, self.series.startYear, self.series.id,self.issueNumber), 4)
 
     # Check that issueID and seriesID exist
     def hasValidID(self):

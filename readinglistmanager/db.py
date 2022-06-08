@@ -125,8 +125,10 @@ class CVDB(DB):
                 time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
                 results = self.cvSession.issue_list(params={"filter": "volume:%s" % (seriesID)})
+                if len(results) == 0: 
+                    printResults("Warning: No issues found for series [%s]" % (seriesID), 4)
             except Exception as e:
-                printResults("There was an error processing CV search for issues for [%s]" % (seriesID), 4)
+                printResults("Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
                 printResults(str(e), 4)
         else:
             results = None
