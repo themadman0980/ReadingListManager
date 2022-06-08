@@ -272,6 +272,8 @@ class Series:
                 curIssue.dateAdded = utilities.getTodaysDate()
                 curIssue.coverDate = utilities.parseDate(issue.cover_date)
                 curIssue.name = utilities.stripSymbols(issue.name)
+                if curIssue.id is None:
+                    curIssue.id = issue.id_
 
                 if curIssue.hasValidID() and curIssue.issueNumber is not None:
                     Issue.addToDB(Series.cvCache,curIssue,self)

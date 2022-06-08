@@ -11,7 +11,7 @@ dateFormat = '%Y-%m-%d'
 dynamicNameTemplate = '[^a-zA-Z0-9]'
 stop_words = ['the', 'a', 'and']
 yearStringCleanTemplate = '[^0-9]'
-cleanStringTemplate = '[^a-zA-Z0-9 ]'
+cleanStringTemplate = '[^a-zA-Z0-9\:\-\(\) ]'
 
 def getCurrentTimeStamp():
     return int(round(datetime.now().timestamp()))

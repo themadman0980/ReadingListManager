@@ -11,12 +11,13 @@ from readinglistmanager.issue import Issue
 import xml.etree.ElementTree as ET
 
 readingListDB = [
-    #{'SourceName': 'cmro', 'DBTables': {
-    #    'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
-    #    }},
-    {'SourceName': 'dcro', 'DBTables': {
+    {'SourceName': 'cmro', 'DBTables': {
         'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
-        }}]
+        }},
+    #{'SourceName': 'dcro', 'DBTables': {
+    #    'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
+    #    }}
+    ]
 
 
 def parseCBLfiles(cvCache):

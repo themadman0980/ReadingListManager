@@ -10,6 +10,7 @@ class Issue:
 
     count = 0
     dbMatches = 0
+    dbNoMatch = 0
     dbMultipleMatches = 0
     idFound = 0
 
@@ -32,7 +33,7 @@ class Issue:
         printResults("ID Match (Multiple) = %s / %s" %
                      (Issue.dbMultipleMatches, Issue.count), 3)  # One match
         printResults("ID Match (None) = %s / %s" %
-                     (Issue.count-Issue.dbMatches, Issue.count), 3)  # One match
+                     (Issue.dbNoMatch, Issue.count), 3)  # One match
 
     def __eq__(self, other):
         if (isinstance(other, Issue)):
@@ -55,8 +56,7 @@ class Issue:
 
         if len(checkResults) > 0:
             # Match already exists!
-            print("Issue %s [%s] from series %s already exists in the DB!" % (
-                issue.issueNumber, issue.id, series.id))
+            if config.verbose: print("Issue %s [%s] from series %s already exists in the DB!" % (issue.issueNumber, issue.id, series.id))
         elif issue.hasValidID() and issue.issueNumber is not None:
             #try:
             if issue.name or issue.coverDate:
@@ -118,6 +118,7 @@ class Issue:
                 self.name = lookupMatches[0][2]
                 self.coverDate = lookupMatches[0][3]
             else:
+                Issue.dbNoMatch += 1
                 if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
                     self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
         else:
