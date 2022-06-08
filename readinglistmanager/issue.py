@@ -16,7 +16,8 @@ class Issue:
 
     def __init__(self, issueNumber, series, issueID=None, name=None, coverDate=None):
         if issueNumber is None:
-            printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
+            printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (
+                series.name, series.startYear, series.id, issueNumber), 5)
         self._issueNumber = issueNumber
         self._series = series
         self._id = issueID
@@ -47,7 +48,7 @@ class Issue:
         return hash((self.series.nameClean, self.series.startYearClean, self.issueNumber, self.id))
 
     @classmethod
-    def addToDB(self,cvCache, issue, series):
+    def addToDB(self, cvCache, issue, series):
         dbCursor = cvCache.connection.cursor()
 
         checkIssueQuery = ''' SELECT * FROM cv_issues WHERE IssueID=%s ''' % (
@@ -56,7 +57,9 @@ class Issue:
 
         if len(checkResults) > 0:
             # Match already exists!
-            if config.verbose: print("Issue %s [%s] from series %s already exists in the DB!" % (issue.issueNumber, issue.id, series.id))
+            if config.verbose:
+                print("Issue %s [%s] from series %s already exists in the DB!" % (
+                    issue.issueNumber, issue.id, series.id))
         elif issue.hasValidID() and issue.issueNumber is not None:
             #try:
             if issue.name or issue.coverDate:
@@ -119,10 +122,13 @@ class Issue:
                 self.coverDate = lookupMatches[0][3]
             else:
                 Issue.dbNoMatch += 1
-                if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
-                    self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
+                if config.verbose:
+                    printResults("Info: No matches found for %s (%s) #%s [%s]" % (
+                        self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
         else:
-            printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (self.series.name, self.series.startYear, self.series.id,self.issueNumber), 4)
+            if config.verbose:
+                printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (
+                    self.series.name, self.series.startYear, self.series.id, self.issueNumber), 4)
 
     # Check that issueID and seriesID exist
     def hasValidID(self):

@@ -51,7 +51,7 @@ class Series:
                 series.name, series.startYear, series.ID))
         elif isinstance(series, Series) and series.hasValidID():
             dateAdded = utilities.getTodaysDate()
-            #try:
+
             if series.numIssues or series.publisher:
                 if series.numIssues and series.publisher:
                     # Both!
@@ -68,14 +68,14 @@ class Series:
             else:
                 volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
                                         VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
-
-            # Only add issues with CV match!
-            dbCursor.execute(volumeQuery)
-            Series.cvCache.connection.commit()
-
-            #except Exception as e:
-            #    print("Unable to process series : %s (%s) [%s]" % (name, startYear, seriesID))
-            #    print(e)
+            try:
+                # Only add issues with CV match!
+                dbCursor.execute(volumeQuery)
+                Series.cvCache.connection.commit()
+            except Exception as e:
+                print("Unable to process series : %s (%s) [%s]" % (
+                    series.name, series.startYear, series.seriesID))
+                print(str(e))
 
         dbCursor.close()
 
@@ -321,9 +321,9 @@ class Series:
                     resultYearClean = utilities.cleanYearString(
                         result.start_year)
                     # If exact series name and year match
-                    if config.verbose:
-                        printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
-                            resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
+                    #if config.verbose:
+                    printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
+                        resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
                     if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
                         # Add result to lists
                         series_matches.append(result)
