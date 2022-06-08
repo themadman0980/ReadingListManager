@@ -20,7 +20,8 @@ def getTodaysDate():
     return datetime.today().strftime(dateFormat)
 
 def parseDate(dateString):
-    return datetime.strftime(dateString, dateFormat)
+    if dateString is not None:
+        return datetime.strftime(dateString, dateFormat)
 
 def stripAccents(s):
     # Converts accented letters to their basic english counterpart
