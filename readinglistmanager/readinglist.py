@@ -5,7 +5,7 @@ import readinglistmanager
 from readinglistmanager.utilities import printResults
 import os
 from readinglistmanager.issue import Issue, ReadingListIssue
-from readinglistmanager import config
+from readinglistmanager import config, datasource
 
 
 class ReadingList:
@@ -33,7 +33,7 @@ class ReadingList:
             self.__nameFromPath()
             self._source = source
             self._issueList = issueList
-            if self.issueList == None: 
+            if self.issueList == None:
                 self._issueList = []
             self._id = id
             self._cvCache = cvCache
@@ -187,7 +187,7 @@ class ReadingList:
         doc = "The list of series found in the readinglist"
 
         def fget(self):
-            if self._issueList == None: 
+            if self._issueList == None:
                 self._issueList = []
             return self._issueList
         return locals()

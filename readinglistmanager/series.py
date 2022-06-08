@@ -8,7 +8,8 @@ from readinglistmanager.db import CVDB
 from readinglistmanager.issue import Issue
 
 _seriesList = []
-_seriesRef = {} # Dictionary of all names
+_seriesRef = {}  # Dictionary of all names
+
 
 class Series:
 
@@ -19,11 +20,11 @@ class Series:
                     'MultipleMatch': 0, 'BlacklistOnlyMatch': 0}
     cvCache = None
 
-
     @classmethod
-    def getSeries(self,name=None, startYear=None, id=None):
+    def getSeries(self, name=None, startYear=None, id=None):
         if (name is None or startYear is None) and id is None:
-            printResults("Warning: Invalid series details for %s (%s) [%s]" % (name, startYear,id),5)
+            printResults("Warning: Invalid series details for %s (%s) [%s]" % (
+                name, startYear, id), 5)
             return
         else:
             # Look for series by ID
@@ -52,16 +53,18 @@ class Series:
                 return newSeries
 
     @classmethod
-    def addToDB(self,series):
+    def addToDB(self, series):
 
         dbCursor = Series.cvCache.connection.cursor()
-        checkVolumeQuery = ''' SELECT * FROM cv_volumes WHERE VolumeID=%s ''' % (series.id)
+        checkVolumeQuery = ''' SELECT * FROM cv_volumes WHERE VolumeID=%s ''' % (
+            series.id)
         checkResults = dbCursor.execute(checkVolumeQuery).fetchall()
 
         if len(checkResults) > 0:
             # Match already exists!
-            printResults("Series %s (%s) [%s] already exists in the DB!" % (name, startYear, seriesID))
-        elif isinstance(series,Series) and series.hasValidID():
+            printResults("Series %s (%s) [%s] already exists in the DB!" % (
+                series.name, series.startYear, series.ID))
+        elif isinstance(series, Series) and series.hasValidID():
             dateAdded = utilities.getTodaysDate()
             #try:
             if series.numIssues or series.publisher:
@@ -122,7 +125,7 @@ class Series:
         # Summary of results:
         printResults("Series: %s" % (Series.count), 2, True)
         printResults("DB Searches: %s, CV Searches = %s" %
-                (Series.dbCounters['SearchCount'], Series.cvCounters['SearchCount']), 3)
+                     (Series.dbCounters['SearchCount'], Series.cvCounters['SearchCount']), 3)
         printResults("Number of series matched: %s / %s" %
                      (seriesMatched, seriesCount), 3)
         printResults("Number of series complete: %s / %s" %
@@ -172,7 +175,8 @@ class Series:
 
     def getIssue(self, issueNumber=None, id=None):
         if issueNumber is None and id is None:
-            printResults("Warning: Invalid issue details for #%s [%s]" % (issueNumber,id),4)
+            printResults("Warning: Invalid issue details for #%s [%s]" % (
+                issueNumber, id), 4)
             return
         else:
             # Match issue from ID
@@ -195,15 +199,18 @@ class Series:
 
     def validate(self):
         if not self.hasValidID() and not self.checkedDB:
-            if config.verbose: printResults("Validating series : %s (%s) [%s]" % (self.name, self.startYear, self.id), 3)
-            
+            if config.verbose:
+                printResults("Validating series : %s (%s) [%s]" % (
+                    self.name, self.startYear, self.id), 3)
+
             # ID missing and DB hasn't been checked yet
             self.findDBSeriesID()
 
             #if self.hasValidID():
             #self.findDBIssueIDs(cvCacheConnection)
 
-            if config.verbose: printResults("DB match : %s" % (self.id), 4)
+            if config.verbose:
+                printResults("DB match : %s" % (self.id), 4)
 
             if not self.hasValidID():
                 # No match found in DB - check CV
@@ -213,7 +220,7 @@ class Series:
                 if self.hasValidID():
                     self.findCVIssueID()
 
-            for issue in self.issueList:                
+            for issue in self.issueList:
                 # Check if issues exist in DB
                 issue.validate(Series.cvCache)
 
@@ -262,14 +269,15 @@ class Series:
             Series.cvCounters['SearchCount'] += 1
 
             if CVDB.searchCount < config.Troubleshooting.api_query_limit:
-                printResults("Info: Searching CV for issues : %s (%s) [%s]" % (self.name,self.startYear,self.id),4)
+                printResults("Info: Searching CV for issues : %s (%s) [%s]" % (
+                    self.name, self.startYear, self.id), 4)
 
             results = Series.cvCache.findIssueMatches(self.id)
             if results is not None:
                 printResults("CV : Results = %s" % (len(results)), 5)
 
             for issue in results:
-                curIssue = self.getIssue(issue.number,issue.id_)
+                curIssue = self.getIssue(issue.number, issue.id_)
                 curIssue.dateAdded = utilities.getTodaysDate()
                 curIssue.coverDate = utilities.parseDate(issue.cover_date)
                 curIssue.name = utilities.stripSymbols(issue.name)
@@ -277,7 +285,7 @@ class Series:
                     curIssue.id = issue.id_
 
                 if curIssue.hasValidID() and curIssue.issueNumber is not None:
-                    Issue.addToDB(Series.cvCache,curIssue,self)
+                    Issue.addToDB(Series.cvCache, curIssue, self)
 
             self.checkedCVIssues = True
 
@@ -299,15 +307,16 @@ class Series:
             #try:
             if config.verbose:
                 printResults("Searching for Volume : %s (%s) on CV" %
-                                (self.name, self.startYear), 4)
-            
+                             (self.name, self.startYear), 4)
+
             if CVDB.searchCount < config.Troubleshooting.api_query_limit:
-                printResults("Info: Searching CV for series : %s (%s)" % (self.name,self.startYear),4)
+                printResults("Info: Searching CV for series : %s (%s)" %
+                             (self.name, self.startYear), 4)
                 cvResults = Series.cvCache.findVolumeMatches(self.name)
 
             if cvResults is None or len(cvResults) == 0:
                 printResults("No matches found for %s (%s)" %
-                                (self.name, self.startYear), 4)
+                             (self.name, self.startYear), 4)
                 Series.cvMatchTypes['NoMatch'] += 1
             else:  # Results were found
                 for result in cvResults:  # Iterate through CV results
@@ -316,8 +325,9 @@ class Series:
                     resultYearClean = utilities.cleanYearString(
                         result.start_year)
                     # If exact series name and year match
-                    if config.verbose: printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
-                        resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
+                    if config.verbose:
+                        printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
+                            resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
                     if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
                         # Add result to lists
                         series_matches.append(result)
@@ -340,7 +350,7 @@ class Series:
                     Series.cvMatchTypes['NoMatch'] += 1
                     if config.verbose:
                         printResults("No exact matches found for %s (%s)" %
-                                        (self.name, self.startYear), 4)
+                                     (self.name, self.startYear), 4)
                 elif len(series_matches) == 1:
                     # One match
                     if len(blacklist_matches) > 0:
@@ -365,7 +375,8 @@ class Series:
                         printResults("No valid results found for %s (%s). %s blacklisted results found." % (
                             self.name, self.startYear, len(blacklist_matches)), 5)
 
-                printResults("CV : Results = %s; Matches = %s" % (numVolumeResults, numVolumeMatches), 5)
+                printResults("CV : Results = %s; Matches = %s" %
+                             (numVolumeResults, numVolumeMatches), 5)
 
                 self.processCVResults(results)
 
@@ -504,11 +515,12 @@ class Series:
 
     def issueList():
         doc = "The issueList property."
-    
+
         def fget(self):
-            if self._issueList == None: self._issueList=[]
+            if self._issueList == None:
+                self._issueList = []
             return self._issueList
-    
+
         def fdel(self):
             del self._issueList
         return locals()
