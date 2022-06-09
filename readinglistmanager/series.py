@@ -297,64 +297,77 @@ class Series:
             blacklist_matches = []
             allowed_matches = []
             preferred_matches = []
+            blacklistPublishers = set()
             cvResults = None
 
-            try:
-                if config.verbose:
-                    printResults("Searching for Volume : %s (%s) on CV" %
-                                (self.name, self.startYear), 4)
+            #try:
+            if config.verbose:
+                printResults("Searching for Volume : %s (%s) on CV" %
+                            (self.name, self.startYear), 4)
 
-                if CVDB.searchCount < config.Troubleshooting.api_query_limit:
-                    printResults("Info: Searching CV for series : %s (%s)" %
-                                (self.name, self.startYear), 4)
-                    cvResults = Series.cvCache.findVolumeMatches(self.name)
+            if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+                printResults("Info: Searching CV for series : %s (%s)" %
+                            (self.name, self.startYear), 4)
+                cvResults = Series.cvCache.findVolumeMatches(self.name)
 
-                if cvResults is None or len(cvResults) == 0:
-                    printResults("No matches found for %s (%s)" %
-                                (self.name, self.startYear), 4)
-                    Series.cvMatchTypes['NoMatch'] += 1
-                else:  # Results were found
-                    for result in cvResults:  # Iterate through CV results
-                        resultNameClean = utilities.getDynamicName(
-                            result.name)
-                        resultYearClean = utilities.cleanYearString(
-                            result.start_year)
-                        # If exact series name and year match
-                        #if config.verbose:
-                        printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
-                            resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
-                        if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
-                            # Add result to lists
-                            series_matches.append(result)
-                            curPublisher = result.publisher.name
+            if cvResults is None or len(cvResults) == 0:
+                printResults("No matches found for %s (%s)" %
+                            (self.name, self.startYear), 4)
+                Series.cvMatchTypes['NoMatch'] += 1
+            else:  # Results were found
+                for result in cvResults:  # Iterate through CV results
+                    resultNameClean = utilities.getDynamicName(
+                        result.name)
+                    resultYearClean = utilities.cleanYearString(
+                        result.start_year)
+                    # If exact series name and year match
+                    #if config.verbose:
+                    printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
+                        resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
+                    if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
+                        # Add result to lists
+                        series_matches.append(result)
+                        curPublisher = result.publisher.name
 
-                            if curPublisher in config.CV.publisher_blacklist:
-                                blacklist_matches.append(result)
-                            elif curPublisher in config.CV.publisher_preferred:
-                                preferred_matches.append(result)
-                            else:
-                                allowed_matches.append(result)
-
-                    numVolumeResults = len(cvResults)
-                    numVolumeMatches = len(series_matches) - len(blacklist_matches)
-
-                    if numVolumeMatches < 0:
-                        numVolumeMatches = 0
-
-                    if len(series_matches) == 0:
-                        Series.cvMatchTypes['NoMatch'] += 1
-                        if config.verbose:
-                            printResults("No exact matches found for %s (%s)" %
-                                        (self.name, self.startYear), 4)
-                    elif len(series_matches) == 1:
-                        # One match
-                        if len(blacklist_matches) > 0:
-                            Series.cvMatchTypes['BlacklistOnlyMatch'] += 1
-                            printResults("No valid results found for %s (%s). %s blacklisted results found with the following publishers: %s" % (
-                                self.name, self.startYear, len(blacklist_matches), ",".join(blacklist_matches)), 5)
+                        if curPublisher in config.CV.publisher_blacklist:
+                            blacklist_matches.append(result)
+                            blacklistPublishers.add(curPublisher)
+                        elif curPublisher in config.CV.publisher_preferred:
+                            preferred_matches.append(result)
                         else:
-                            Series.cvMatchTypes['OneMatch'] += 1
-                            results = series_matches
+                            allowed_matches.append(result)
+
+                numVolumeResults = len(cvResults)
+                numVolumeMatches = len(series_matches) - len(blacklist_matches)
+
+                if numVolumeMatches < 0:
+                    numVolumeMatches = 0
+
+                if len(series_matches) == 0:
+                    Series.cvMatchTypes['NoMatch'] += 1
+                    if config.verbose:
+                        printResults("No exact matches found for %s (%s)" %
+                                    (self.name, self.startYear), 4)
+                elif len(series_matches) == 1:
+                    # One match
+                    if len(blacklist_matches) > 0:
+                        Series.cvMatchTypes['BlacklistOnlyMatch'] += 1
+                        printResults("No valid results found for %s (%s). %s blacklisted results found with the following publishers: %s" % (
+                            self.name, self.startYear, len(blacklist_matches), ",".join(blacklistPublishers)), 5)
+                    else:
+                        Series.cvMatchTypes['OneMatch'] += 1
+                        results = series_matches
+                else:
+                    # Multiple matches
+                    Series.cvMatchTypes['MultipleMatch'] += 1
+                    publishers = set(
+                        [vol.publisher.name for vol in series_matches])
+                    printResults("Warning: Multiple CV matches found! Publishers: %s" % (
+                        ", ".join(publishers)), 5)
+                    if len(preferred_matches) > 0:
+                        results = preferred_matches
+                    elif len(allowed_matches) > 0:
+                        results = allowed_matches
                     else:
                         # Multiple matches
                         Series.cvMatchTypes['MultipleMatch'] += 1
@@ -367,29 +380,18 @@ class Series:
                         elif len(allowed_matches) > 0:
                             results = allowed_matches
                         else:
-                            # Multiple matches
-                            Series.cvMatchTypes['MultipleMatch'] += 1
-                            publishers = set(
-                                [vol.publisher.name for vol in series_matches])
-                            printResults("Warning: Multiple CV matches found! Publishers: %s" % (
-                                ", ".join(publishers)), 5)
-                            if len(preferred_matches) > 0:
-                                results = preferred_matches
-                            elif len(allowed_matches) > 0:
-                                results = allowed_matches
-                            else:
-                                printResults("No valid results found for %s (%s). %s blacklisted results found." % (
-                                    self.name, self.startYear, len(blacklist_matches)), 5)
+                            printResults("No valid results found for %s (%s). %s blacklisted results found." % (
+                                self.name, self.startYear, len(blacklist_matches)), 5)
 
-                    printResults("CV : Results = %s; Matches = %s" %
-                                (numVolumeResults, numVolumeMatches), 5)
+                printResults("CV : Results = %s; Matches = %s" %
+                            (numVolumeResults, numVolumeMatches), 5)
 
-                    self.processCVResults(results)
+                self.processCVResults(results)
 
-            except Exception as e:
-                printResults("There was an error processing Volume search for %s (%s)" % (
-                    self.name, self.startYear), 4)
-                print(str(e))
+            #except Exception as e:
+            #    printResults("There was an error processing Volume search for %s (%s)" % (
+            #        self.name, self.startYear), 4)
+            #    print(str(e))
 
         self.checkedCVVolumes = True
 
