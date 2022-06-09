@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from readinglistmanager import utilities,config
+from readinglistmanager import utilities, config
 from readinglistmanager.utilities import printResults
 from readinglistmanager.datasource import Source, OnlineSource, CVSource
 #from readinglistmanager.series import Series
-import sqlite3,time
+import sqlite3
+import time
 from simyan.comicvine import Comicvine
 
 dbConnectionList = []
@@ -42,7 +43,8 @@ class DB:
     def setDBConnection(self):
         self._connection = connectToSource(self._source)
         if self._connection == None:
-            printResults("Error: Connection to db failed for %s" % (self.source.file), 2)
+            printResults("Error: Connection to db failed for %s" %
+                         (self.source.file), 2)
 
     def connection():
         doc = "The db connection"
@@ -91,9 +93,9 @@ class CVDB(DB):
 
     def getCVSleepTimeRemaining(self):
         #get time since last CV API call
-        timeDif = (utilities.getCurrentTimeStamp() - self._lastSearchedTimestamp) / 1000
+        timeDif = (utilities.getCurrentTimeStamp()
+                   - self._lastSearchedTimestamp) / 1000
         return max(0, config.CV.api_rate - timeDif)
-
 
     def cvSession():
         doc = "The Issue Details table name"
@@ -106,29 +108,35 @@ class CVDB(DB):
         return locals()
     cvSession = property(**cvSession())
 
-    def findVolumeMatches(self,name):
+    def findVolumeMatches(self, name):
         results = None
-        if CVDB.searchCount < config.Troubleshooting.api_query_limit:
-            #try:
-            time.sleep(self.getCVSleepTimeRemaining())
-            self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
-            results = self.cvSession.volume_list(params={"filter": "name:%s" % (name)})        
-            #except Exception as e:
-            #    printResults("There was an error processing CV search for %s" % (name), 4)
-            #    printResults(str(e), 4)
-            
-        return results
-
-    def findIssueMatches(self,seriesID):
         if CVDB.searchCount < config.Troubleshooting.api_query_limit:
             try:
                 time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
-                results = self.cvSession.issue_list(params={"filter": "volume:%s" % (seriesID)})
-                if len(results) == 0: 
-                    printResults("Warning: No issues found for series [%s]" % (seriesID), 4)
+                results = self.cvSession.volume_list(
+                    params={"filter": "name:%s" % (name)})
             except Exception as e:
-                printResults("Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
+                printResults(
+                    "There was an error processing CV search for %s" % (name), 4)
+                printResults(str(e), 4)
+
+        return results
+
+    def findIssueMatches(self, seriesID):
+        if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+            try:
+                time.sleep(self.getCVSleepTimeRemaining())
+                self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
+                results = self.cvSession.issue_list(
+                    params={"filter": "volume:%s" % (seriesID)})
+                CVDB.searchCount += 1
+                if len(results) == 0:
+                    printResults(
+                        "Warning: No issues found for series [%s]" % (seriesID), 4)
+            except Exception as e:
+                printResults(
+                    "Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
                 printResults(str(e), 4)
         else:
             results = None
