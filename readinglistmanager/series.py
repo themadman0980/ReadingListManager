@@ -170,8 +170,8 @@ class Series:
 
     def getIssue(self, issueNumber=None, id=None):
         if issueNumber is None and id is None:
-            printResults("Warning: Invalid issue details for #%s [%s]" % (
-                issueNumber, id), 4)
+            printResults("Warning: Invalid issue details for %s (%s) #%s [%s]" % (
+                self.name,self.startYear,issueNumber, id), 4)
             return
         else:
             # Match issue from ID

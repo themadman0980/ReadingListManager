@@ -122,7 +122,8 @@ class Issue:
                 if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
                     self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
         else:
-            printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (self.series.name, self.series.startYear, self.series.id,self.issueNumber), 4)
+            pass
+            #printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (self.series.name, self.series.startYear, self.series.id,self.issueNumber), 4)
 
     # Check that issueID and seriesID exist
     def hasValidID(self):
