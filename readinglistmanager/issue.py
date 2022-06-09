@@ -47,8 +47,8 @@ class Issue:
         return hash((self.series.nameClean, self.series.startYearClean, self.issueNumber, self.id))
 
     @classmethod
-    def addToDB(self,cvCache, issue, series):
-        dbCursor = cvCache.connection.cursor()
+    def addToDB(self,database, issue, series):
+        dbCursor = database.connection.cursor()
 
         checkIssueQuery = ''' SELECT * FROM cv_issues WHERE IssueID=%s ''' % (
             issue.id)
@@ -79,7 +79,7 @@ class Issue:
 
             # Only add issues with CV match!
             dbCursor.execute(issueQuery)
-            cvCache.connection.commit()
+            database.connection.commit()
             #except Exception as e:
             #    print("Unable to process issue for %s : %s [%s]" % (
             #        issue.series.id, issue.number, issue.id))
@@ -87,17 +87,17 @@ class Issue:
 
         dbCursor.close()
 
-    def validate(self, cvCache):
+    def validate(self, database):
         if not self.hasValidID() and not self.checkedDB:
             # Check DB for issue ID match
-            self.findDBIssueID(cvCache)
+            self.findDBIssueID(database)
 
-    def findDBIssueID(self, cvCache):
+    def findDBIssueID(self, database):
 
         lookupMatches = []
         if self.series.hasValidID() and self.issueNumber is not None:
             try:
-                dbCursor = cvCache.connection.cursor()
+                dbCursor = database.connection.cursor()
                 lookupIssuesQuery = ''' SELECT * FROM cv_issues WHERE VolumeID=\"%s\" AND IssueNumber=\"%s\" ''' % (
                     self.series.id, self.issueNumber)
                 # printResults("Looking up series: %s (%s)" % (nameClean, year), 3)

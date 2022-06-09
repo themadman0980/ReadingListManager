@@ -68,10 +68,10 @@ class CBLSource(Source):
         super().__init__(name, file, "CBL")
 
 
-class CVSource(Source):
+class DataSource(Source):
 
     def __init__(self, name, file):
-        super().__init__(name, file, "CV")
+        super().__init__(name, file, "Data")
         self._tableIssueDetails = 'cv_issues'
         self._tableSearchIssues = 'cv_searches_issues'
         self._tableVolumeDetails = 'cv_volumes'

@@ -12,26 +12,40 @@ dataDirectory = os.path.join(scriptDirectory, "Data")
 readingListDirectory = os.path.join(scriptDirectory, "ReadingLists")
 resultsDirectory = os.path.join(scriptDirectory, "Results")
 
+dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
 configFile = os.path.join(scriptDirectory, 'config.ini')
 resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (timeString))
+problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (timeString))
+
 
 class FileManager():
     def __init__(self):
-        self._cvCache = cvCacheFile
+        self._cvCacheFile = cvCacheFile
         self._dataDirectory = dataDirectory
         self._readingListDirectory = readingListDirectory
         self._resultsDirectory = resultsDirectory
         self._resultsFile = resultsFile
+        self._problemsFile = problemsFile
+        self._dataFile = dataFile
 
-    def cvCache():
+    def cvCacheFile():
         doc = "The cvCache property."
 
         def fget(self):
-            return self._cvCache
+            return self._cvCacheFile
 
         return locals()
-    cvCache = property(**cvCache())
+    cvCacheFile = property(**cvCacheFile())
+
+    def dataFile():
+        doc = "The main database file"
+
+        def fget(self):
+            return self._dataFile
+
+        return locals()
+    dataFile = property(**dataFile())
 
     def dataDirectory():
         doc = "The dataDirectory property."
@@ -61,12 +75,21 @@ class FileManager():
     resultsDirectory = property(**resultsDirectory())
     
     def resultsFile():
-        doc = "The resultsFile property."
+        doc = "The output file for console data"
 
         def fget(self):
             return self._resultsFile
 
         return locals()
     resultsFile = property(**resultsFile())
+
+    def problemsFile():
+        doc = "The output file for problem data"
+
+        def fget(self):
+            return self._problemsFile
+
+        return locals()
+    problemsFile = property(**problemsFile())
 
 files = FileManager()

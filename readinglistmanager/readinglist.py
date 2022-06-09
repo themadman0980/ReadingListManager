@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import readinglistmanager
 from readinglistmanager.utilities import printResults
 import os
 from readinglistmanager.issue import Issue, ReadingListIssue
-from readinglistmanager import config
+from readinglistmanager import config,datasource
 
 
 class ReadingList:
@@ -26,7 +25,7 @@ class ReadingList:
         printResults("All issues matched: %s / %s" %
                      (ReadingList.numCompleteIssueMatches, ReadingList.count), 3)
 
-    def __init__(self, name, source, cvCache, issueList=None, id=None):
+    def __init__(self, name, source, database, issueList=None, id=None):
         ReadingList.count += 1
         try:
             self._name = name
@@ -36,7 +35,7 @@ class ReadingList:
             if self.issueList == None: 
                 self._issueList = []
             self._id = id
-            self._cvCache = cvCache
+            self._database = database
         except Exception as e:
             printResults("Error: Problem initialising new list %s [%s]" % (
                 name, source.name), 4)
@@ -75,65 +74,12 @@ class ReadingList:
             printResults("Number of issues matched: %s / %s" %
                          (issuesMatched, issueCount), 3)
 
-    # Check for ID matches for series/issues in reading list
-
-    #def validate(self, cvCacheConnection, cvSession):
-    #    if config.verbose:
-    #        printResults("Validating reading list : %s (%s) [%s]" % (
-    #            self.name, self.source.type, self.id), 2)
-    #    for series in self.seriesList:
-    #        series.validate(cvCacheConnection, cvSession)
 
     def addIssue(self, issue, entryNumber):
         if isinstance(issue, Issue):
             readingListIssue = ReadingListIssue(issue, entryNumber)
             self._issueList.append(readingListIssue)
 
-    # Function to import list of Issues as set of unique series
-    #def processIssueList(self, issueList):
-    #    printResults("Updating issue data for reading list : %s [%s]" % (
-    #        self.name, self.source.type), 3)
-
-    #    for issue in issueList:
-    #        series = issue.series
-
-    #    # Initialise seriesList set
-    #    if self.seriesList is not None:
-    #        seriesList = self.seriesList
-    #    else:
-    #        seriesList = set()
-
-    #    # Ensure data is a list of Issues
-    #    if isinstance(issueList, list):
-    #        for issue in issueList:
-    #            if isinstance(issue, Issue):
-    #                seriesList.add(issue.series)
-    #            else:
-    #                print("Not valid issue: %s" % issue)
-    #                return
-
-    #    finalSeriesList = set()
-
-    #    # Iterate through unique series
-    #    for series in seriesList:
-    #        curSeriesIssues = []
-    #        # Check every issue in ReadingList for matches with current series
-    #        for issue in issueList:
-    #            if issue.series == series:
-    #                # Book matches current series! Add issue to series issuelist
-    #                curSeriesIssues.append(issue)
-    #
-    #        # Add all issues to series object
-    #        series.issueList = curSeriesIssues
-
-    #        finalSeriesList.add(series)
-
-    #    self._seriesList = finalSeriesList
-
-    # Internal function to add list numbers to each issue
-
-    #def createFromIssueList(self, issueList):
-    #    self.__setSeriesList(issueList)
 
     def __nameFromPath(self):
         filename, file_extension = os.path.splitext(self._name)

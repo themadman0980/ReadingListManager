@@ -5,7 +5,7 @@ import unicodedata  # Needed to strip character accents
 import re
 import os
 from datetime import datetime
-from . import filemanager
+from readinglistmanager import filemanager
 
 dateFormat = '%Y-%m-%d'
 dynamicNameTemplate = '[^a-zA-Z0-9]'
@@ -63,3 +63,8 @@ def printResults(string, indentation, lineBreak=False, replace=False):
             print("%s%s" % ('\t'*indentation, string), end="\r", flush=True)
         else:
             print("%s%s" % ('\t'*indentation, string))
+
+def writeProblemData(string):
+    with open(filemanager.files.problemsFile, mode='a') as file:
+        file.write("\n%s" % (string))
+        file.flush()

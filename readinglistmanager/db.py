@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from readinglistmanager import utilities, config
+from readinglistmanager.filemanager import files
 from readinglistmanager.utilities import printResults
-from readinglistmanager.datasource import Source, OnlineSource, CVSource
+from readinglistmanager.datasource import Source, OnlineSource, DataSource
 #from readinglistmanager.series import Series
 import sqlite3
 import time
 from simyan.comicvine import Comicvine
+from simyan.sqlite_cache import SQLiteCache
 
 dbConnectionList = []
 
@@ -75,16 +77,16 @@ class DB:
     source = property(**source())
 
 
-class CVDB(DB):
+class DataDB(DB):
 
     searchCount = 0
 
     def __init__(self, source):
         super().__init__(source)
         self._lastSearchedTimestamp = 0
-        self._cvSession = Comicvine(api_key=config.CV.api_key)
+        self._cvSession = Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(files.cvCacheFile,30))
 
-        if not isinstance(source, CVSource):
+        if not isinstance(source, DataSource):
             printResults("Error: Invalid source type for CV data!")
 
         self.createTables()
@@ -110,7 +112,7 @@ class CVDB(DB):
 
     def findVolumeMatches(self, name):
         results = None
-        if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+        if DataDB.searchCount < config.Troubleshooting.api_query_limit:
             try:
                 time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
@@ -124,13 +126,13 @@ class CVDB(DB):
         return results
 
     def findIssueMatches(self, seriesID):
-        if CVDB.searchCount < config.Troubleshooting.api_query_limit:
+        if DataDB.searchCount < config.Troubleshooting.api_query_limit:
             try:
                 time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
                 results = self.cvSession.issue_list(
                     params={"filter": "volume:%s" % (seriesID)})
-                CVDB.searchCount += 1
+                DataDB.searchCount += 1
                 if len(results) == 0:
                     printResults(
                         "Warning: No issues found for series [%s]" % (seriesID), 4)

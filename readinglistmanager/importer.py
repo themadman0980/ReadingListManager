@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import readinglistmanager
 from readinglistmanager import filemanager,datasource,db
 from readinglistmanager.utilities import printResults
 import os
@@ -20,7 +19,7 @@ readingListDB = [
     ]
 
 
-def parseCBLfiles(cvCache):
+def parseCBLfiles(database):
     readingLists = []
 
     printResults("Checking CBL files in %s" %
@@ -37,7 +36,7 @@ def parseCBLfiles(cvCache):
                     cblinput = fileroot.findall("./Books/Book")
 
                     readingList = ReadingList(
-                        file, datasource.CBLSource(file, filename), cvCache)
+                        file, datasource.CBLSource(file, filename), database)
 
                     i = 0
                     count = len(cblinput)
@@ -74,7 +73,7 @@ def parseCBLfiles(cvCache):
     return readingLists
 
 
-def getOnlineLists(cvCache):
+def getOnlineLists(database):
 
     onlineLists = []
 
@@ -98,7 +97,7 @@ def getOnlineLists(cvCache):
             listName = readingList[1]
 
             curReadingList = ReadingList(
-                listName, curSource, cvCache, None, listID)
+                listName, curSource, database, None, listID)
 
             # Get all reading list entries from readinglist DB table
             printResults("Getting issue details for %s" % (curReadingList.name), 3)
