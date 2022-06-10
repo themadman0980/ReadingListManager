@@ -114,7 +114,7 @@ class DataDB(DB):
         results = None
         if DataDB.searchCount < config.Troubleshooting.api_query_limit:
             try:
-                time.sleep(self.getCVSleepTimeRemaining())
+                #time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
                 results = self.cvSession.volume_list(
                     params={"filter": "name:%s" % (name)})
@@ -128,7 +128,7 @@ class DataDB(DB):
     def findIssueMatches(self, seriesID):
         if DataDB.searchCount < config.Troubleshooting.api_query_limit:
             try:
-                time.sleep(self.getCVSleepTimeRemaining())
+                #time.sleep(self.getCVSleepTimeRemaining())
                 self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
                 results = self.cvSession.issue_list(
                     params={"filter": "volume:%s" % (seriesID)})
