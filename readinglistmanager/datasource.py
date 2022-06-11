@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from readinglistmanager import utilities
 from readinglistmanager.utilities import printResults
-from readinglistmanager import config
-import os, time
+import os
 
 class Source:
     def __init__(self, name, file, sourceType):
