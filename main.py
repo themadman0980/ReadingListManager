@@ -44,6 +44,7 @@ def main():
     ReadingList.printSummaryResults(readingLists)
     Series.printSummaryResults()
     Issue.printSummaryResults()
+    problemdata.ProblemData.printSummaryResults()
     problemdata.ProblemData.exportToFile()
 
 if __name__ == "__main__":

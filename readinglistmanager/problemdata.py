@@ -7,16 +7,21 @@ class ProblemData():
 
     class ProblemType(Enum):
         Invalid = "Invalid"
-        NoMatch = "No Match"
+        CVNoResults = "No CV Results"
+        CVNoMatch = "No CV Match"
+        CVPartialMatch = "Partial CV Match"
         MultipleMatch = "Multiple Matches"
         DBError = "DB Error"
         CVError = "CV Error"
         IssueError = "Issue Error"
 
+    problemCount = 0
+
     _list = dict((problem,[]) for problem in ProblemType)
 
     def __init__(self,type):
         self.type = type
+        ProblemData.problemCount += 1
         self._addToList()
 
     def _addToList(self):
@@ -38,6 +43,12 @@ class ProblemData():
                     # Print entry
                     utilities.writeProblemData(string)
 
+    @classmethod
+    def printSummaryResults(self):
+        utilities.printResults("Problem Data: %s" % (ProblemData.problemCount), 2, True)
+        for type,results in ProblemData._list:
+            utilities.printResults("%s : %s" % (type,len(results)), 3)
+
 class ProblemIssue(ProblemData):
 
     def __init__(self,issue,type):
@@ -50,6 +61,11 @@ class ProblemIssue(ProblemData):
 class ProblemSeries(ProblemData):
 
     def __init__(self,series,type):
+        if type == ProblemData.ProblemType.CVNoMatch:
+            for result in series._cvResults:
+                if series.cleanName in result.name:
+                    type = ProblemData.ProblemType.CVPartialMatch
+
         super().__init__(type)
         self.series = series
 

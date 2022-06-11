@@ -244,6 +244,7 @@ class Series:
             if config.verbose:
                 printResults("%s series matches found in CV Cache for %s (%s)" % (
                     len(lookupMatches), self.name, self.startYear), 4)
+            
             dbCursor.close()
         except Exception as e:
             ProblemSeries(self,ProblemData.ProblemType.DBError)
@@ -314,11 +315,18 @@ class Series:
                             (self.name, self.startYear), 4)
                 self.cvResultsSeries = Series.database.findVolumeMatches(self.name)
 
+                if len(self.cvResultsSeries) == 0 and ':' in self.name:
+                    modifiedName = self.name.replace(':','')
+                    printResults("Info: Searching CV for series : %s (%s)" %
+                                (modifiedName, self.startYear), 4)
+                    self.cvResultsSeries = Series.database.findVolumeMatches(modifiedName)
+
+
                 if self.cvResultsSeries is None or len(self.cvResultsSeries) == 0:
                     printResults("No matches found for %s (%s)" %
                                 (self.name, self.startYear), 4)
                     Series.cvMatchTypes['NoMatch'] += 1
-                    ProblemSeries(self,ProblemData.ProblemType.NoMatch)
+                    ProblemSeries(self,ProblemData.ProblemType.CVNoResults)
                 else:  # Results were found
                     for result in self.cvResultsSeries:  # Iterate through CV results
                         resultNameClean = utilities.getDynamicName(
@@ -354,6 +362,8 @@ class Series:
                         if config.verbose:
                             printResults("No exact matches found for %s (%s)" %
                                         (self.name, self.startYear), 4)
+                        ProblemSeries(self,ProblemData.ProblemType.CVNoMatch)
+
                     elif matchCounter == 1:
                         # One match
                         if len(matches['Blacklist']) > 0:
@@ -375,22 +385,11 @@ class Series:
                         elif len(matches['Allowed']) > 0:
                             results = matches['Allowed']
                         else:
-                            # Multiple matches
-                            Series.cvMatchTypes['MultipleMatch'] += 1
-                            publishers = set(
-                                [vol.publisher.name for vol in matchesFinal])
-                            printResults("Warning: Multiple CV matches found! Publishers: %s" % (
-                                ", ".join(publishers)), 5)
-                            if len(matches['Preferred']) > 0:
-                                results = matches['Preferred']
-                            elif len(matches['Allowed']) > 0:
-                                results = matches['Allowed']
-                            else:
-                                ProblemSeries(self,ProblemData.ProblemType.NoMatch)
-                                printResults("No valid results found for %s (%s). %s blacklisted results found." % (
-                                    self.name, self.startYear, len(matches['Blacklist'])), 5)
+                            ProblemSeries(self,ProblemData.ProblemType.CVNoMatch)
+                            printResults("No valid results found for %s (%s). %s blacklisted results found." % (
+                                self.name, self.startYear, len(matches['Blacklist'])), 5)
                         
-                    if len(results) > 1 : ProblemSeries(self,ProblemData.ProblemType.MultipleMatch)
+                    if numAllowedMatches > 1 : ProblemSeries(self,ProblemData.ProblemType.MultipleMatch)
 
                     printResults("CV : Results = %s; Matches = %s" %
                                 (numResults, numAllowedMatches), 5)
