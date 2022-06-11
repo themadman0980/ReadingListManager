@@ -41,9 +41,13 @@ def getDynamicName(string):
     return cleanString
 
 
-def cleanYearString(string):
+def getCleanYear(string):
     cleanString = re.sub(yearStringCleanTemplate, '', str(string))
-    return cleanString
+    
+    if cleanString == '':
+        return None
+    else:
+        return cleanString
 
 
 def printResults(string, indentation, lineBreak=False, replace=False):

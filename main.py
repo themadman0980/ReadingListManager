@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from readinglistmanager.utilities import printResults
-from readinglistmanager import utilities,importer,datasource,db,config,problemdata
+from readinglistmanager import importer,datasource,db,config,problemdata
 from readinglistmanager.filemanager import files
 from readinglistmanager.series import Series
 from readinglistmanager.issue import Issue

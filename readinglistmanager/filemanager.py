@@ -18,6 +18,15 @@ configFile = os.path.join(scriptDirectory, 'config.ini')
 resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (timeString))
 problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (timeString))
 
+def checkDirectories():
+
+    directories = {dataDirectory,readingListDirectory,resultsDirectory}
+
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    pass
 
 class FileManager():
     def __init__(self):
@@ -28,6 +37,7 @@ class FileManager():
         self._resultsFile = resultsFile
         self._problemsFile = problemsFile
         self._dataFile = dataFile
+        checkDirectories()
 
     def cvCacheFile():
         doc = "The cvCache property."
@@ -91,5 +101,6 @@ class FileManager():
 
         return locals()
     problemsFile = property(**problemsFile())
+
 
 files = FileManager()

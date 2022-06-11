@@ -7,7 +7,8 @@ class ProblemData():
         Invalid = "Invalid"
         CVNoResults = "No CV Results"
         CVNoMatch = "No CV Match"
-        CVPartialMatch = "Partial CV Match"
+        CVSimilarMatch = "Similar CV Match"
+        CVIncorrectYear = "CV Match With Incorrect Year"
         MultipleMatch = "Multiple Matches"
         DBError = "DB Error"
         CVError = "CV Error"
@@ -16,14 +17,33 @@ class ProblemData():
     problemCount = 0
 
     _list = dict((problem,[]) for problem in ProblemType)
+    _problemSeries = []
 
     def __init__(self,type):
         self.type = type
         ProblemData.problemCount += 1
-        self._addToList()
 
     def _addToList(self):
         ProblemData._list[self.type].append(self)
+        if hasattr(self,'series'): ProblemData._problemSeries.append(self.series)
+
+    @classmethod
+    def addSeries(self,series,problemType):
+        if series not in ProblemData._problemSeries:
+            ProblemSeries(series,problemType)
+            ProblemData._problemSeries.append(series)
+
+
+    def _checkForPartialMatch(self,nameClean,cvResults):
+        if self.type == ProblemData.ProblemType.CVNoMatch and cvResults is not None:
+            try:
+                for result in cvResults:
+                    cleanResultName = utilities.getDynamicName(result.name)
+                    if nameClean in cleanResultName:
+                        self.type = ProblemData.ProblemType.CVPartialMatch
+                        return
+            except AttributeError:
+                pass # Is issue, not series
 
     @classmethod
     def exportToFile(self):
@@ -44,28 +64,28 @@ class ProblemData():
     @classmethod
     def printSummaryResults(self):
         utilities.printResults("Problem Data: %s" % (ProblemData.problemCount), 2, True)
-        for type,results in ProblemData._list:
-            utilities.printResults("%s : %s" % (type,len(results)), 3)
+        for type in ProblemData.ProblemType:
+            count = len(ProblemData._list[type])
+            utilities.printResults("%s : %s" % (type.value,count), 3)
 
 class ProblemIssue(ProblemData):
 
     def __init__(self,issue,type):
         super().__init__(type)
         self.issue = issue
+        self._addToList()
+
 
     def __getattr__(self, attr):
         return getattr(self.issue, attr)
 
 class ProblemSeries(ProblemData):
 
-    def __init__(self,series,type):
-        if type == ProblemData.ProblemType.CVNoMatch:
-            for result in series._cvResults:
-                if series.cleanName in result.name:
-                    type = ProblemData.ProblemType.CVPartialMatch
-
-        super().__init__(type)
+    def __init__(self,series,problemType):
+        super().__init__(problemType)
+        #self._checkForPartialMatch(series.nameClean,series.cvResultsSeries)
         self.series = series
+        self._addToList()
 
     def __getattr__(self, attr):
         return getattr(self.series, attr)

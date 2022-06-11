@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from readinglistmanager import utilities
-from readinglistmanager.problemdata import ProblemData, ProblemSeries
+from readinglistmanager.problemdata import ProblemData
 from readinglistmanager.utilities import printResults
 from readinglistmanager import config
 from readinglistmanager.db import DataDB
@@ -73,7 +73,7 @@ class Series:
                 dbCursor.execute(volumeQuery)
                 Series.database.connection.commit()
             except Exception as e:
-                ProblemSeries(series,ProblemData.ProblemType.DBError)
+                ProblemData.addSeries(series,ProblemData.ProblemType.DBError)
                 print("Unable to process series : %s (%s) [%s]" % (
                     series.name, series.startYear, series.seriesID))
                 print(str(e))
@@ -93,7 +93,7 @@ class Series:
     @classmethod
     def getCleanStartYear(self, startYear):
         if startYear is not None:
-            return utilities.cleanYearString(startYear)
+            return utilities.getCleanYear(startYear)
 
     @classmethod
     def printSummaryResults(self):
@@ -168,7 +168,7 @@ class Series:
     @classmethod
     def getKey(self, seriesName, seriesStartYear):
         if None not in (seriesName, seriesStartYear):
-            return "%s-%s" % (utilities.getDynamicName(seriesName), utilities.cleanYearString(seriesStartYear))
+            return "%s-%s" % (utilities.getDynamicName(seriesName), utilities.getCleanYear(seriesStartYear))
         else:
             return None
 
@@ -176,7 +176,7 @@ class Series:
         if issueNumber is None and id is None:
             printResults("Warning: Invalid issue details for %s (%s) #%s [%s]" % (
                 self.name,self.startYear,issueNumber, id), 4)
-            ProblemSeries(self,ProblemData.ProblemType.IssueError)
+            ProblemData.addSeries(self,ProblemData.ProblemType.IssueError)
             return
         else:
             # Match issue from ID
@@ -247,14 +247,14 @@ class Series:
             
             dbCursor.close()
         except Exception as e:
-            ProblemSeries(self,ProblemData.ProblemType.DBError)
+            ProblemData.addSeries(self,ProblemData.ProblemType.DBError)
             print("Error while checking series %s (%s)" %
                   (self.name, self.startYear))
             print(e)
 
         if lookupMatches is not None and len(lookupMatches) > 0:
             if len(lookupMatches) > 1:
-                ProblemSeries(self,ProblemData.ProblemType.MultipleMatch)
+                ProblemData.addSeries(self,ProblemData.ProblemType.MultipleMatch)
                 printResults("Warning: Multiple DB matches found for %s (%s)" % (
                     self.nameClean, self.startYearClean), 4)
             # There was an exact match. Check publisher preferences
@@ -275,19 +275,20 @@ class Series:
                 self.name, self.startYear, self.id), 4)
 
             results = Series.database.findIssueMatches(self.id)
+
             if results is not None:
                 printResults("CV : Results = %s" % (len(results)), 5)
 
-            for issue in results:
-                curIssue = self.getIssue(issue.number, issue.id_)
-                curIssue.dateAdded = utilities.getTodaysDate()
-                curIssue.coverDate = utilities.parseDate(issue.cover_date)
-                curIssue.name = utilities.stripSymbols(issue.name)
-                if curIssue.id is None:
-                    curIssue.id = issue.id_
+                for issue in results:
+                    curIssue = self.getIssue(issue.number, issue.id_)
+                    curIssue.dateAdded = utilities.getTodaysDate()
+                    curIssue.coverDate = utilities.parseDate(issue.cover_date)
+                    curIssue.name = utilities.stripSymbols(issue.name)
+                    if curIssue.id is None:
+                        curIssue.id = issue.id_
 
-                if curIssue.hasValidID() and curIssue.issueNumber is not None:
-                    Issue.addToDB(Series.database, curIssue, self)
+                    if curIssue.hasValidID() and curIssue.issueNumber is not None:
+                        Issue.addToDB(Series.database, curIssue, self)
 
             self.checkedCVIssues = True
 
@@ -299,7 +300,7 @@ class Series:
         if config.CV.check_volumes and self.name is not None:
             Series.cvCounters['SearchCount'] += 1
 
-            matches = {'Preferred':[],'Allowed':[],'Blacklist':[]}
+            matches = {'Preferred':[],'Allowed':[],'Blacklist':[],'NameOnly':[]}
             matchCounter = 0
             results = []
             blacklistPublishers = set()
@@ -324,29 +325,37 @@ class Series:
                 printResults("No matches found for %s (%s)" %
                             (self.name, self.startYear), 4)
                 Series.cvMatchTypes['NoMatch'] += 1
-                ProblemSeries(self,ProblemData.ProblemType.CVNoResults)
+                ProblemData.addSeries(self,ProblemData.ProblemType.CVNoResults)
             else:  # Results were found
                 for result in self.cvResultsSeries:  # Iterate through CV results
                     resultNameClean = utilities.getDynamicName(
                         result.name)
-                    resultYearClean = utilities.cleanYearString(
+                    resultYearClean = utilities.getCleanYear(
                         result.start_year)
                     # If exact series name and year match
                     #if config.verbose:
                     printResults("Comparing CV \"%s (%s)\" with DB \"%s (%s)\"" % (
                         resultNameClean, resultYearClean, self.nameClean, self.startYearClean), 5)
-                    if resultNameClean == self.nameClean and resultYearClean == self.startYearClean:
-                        # Add result to lists
-                        curPublisher = result.publisher.name
-                        matchCounter += 1
+                    if resultNameClean == self.nameClean:
+                        if resultYearClean == self.startYearClean:
+                            # Add result to lists
+                            curPublisher = result.publisher.name
+                            matchCounter += 1
 
-                        if curPublisher in config.CV.publisher_blacklist:
-                            matches['Blacklist'].append(result)
-                            blacklistPublishers.add(curPublisher)
-                        elif curPublisher in config.CV.publisher_preferred:
-                            matches['Preferred'].append(result)
+                            if curPublisher in config.CV.publisher_blacklist:
+                                matches['Blacklist'].append(result)
+                                blacklistPublishers.add(curPublisher)
+                            elif curPublisher in config.CV.publisher_preferred:
+                                matches['Preferred'].append(result)
+                            else:
+                                matches['Allowed'].append(result)
                         else:
-                            matches['Allowed'].append(result)
+                            # Incorrect year
+                            matches['NameOnly'].append(result)
+                    elif self.nameClean in resultNameClean:
+                            # Series name is incorrect but similar
+                            matches['NameOnly'].append(result)
+                                
 
                 numResults = len(self.cvResultsSeries)
                 matchesFinal = matches['Preferred'] + matches['Allowed']
@@ -357,10 +366,30 @@ class Series:
 
                 if matchCounter == 0:
                     Series.cvMatchTypes['NoMatch'] += 1
-                    if config.verbose:
-                        printResults("No exact matches found for %s (%s)" %
-                                    (self.name, self.startYear), 4)
-                    ProblemSeries(self,ProblemData.ProblemType.CVNoMatch)
+                    if config.verbose: printResults("No exact matches found for %s (%s)" % (self.name, self.startYear), 4)
+                    if len(matches['NameOnly']) > 0:
+                        # If dynamicname matches were found, see if the series year was within 2 years of expected
+                        deviation = 100
+                        for match in matches['NameOnly']:
+                            matchYearClean = utilities.getCleanYear(match.start_year)
+                            matchNameClean = utilities.getDynamicName(match.name)
+                            
+                            if self.nameClean == matchNameClean:
+                                if None not in (match.start_year, self.startYearClean):
+                                    newDeviation = abs(int(matchYearClean) - int(self.startYearClean))
+                                    deviation = min(deviation,newDeviation)    
+
+                                    if deviation <= 2:
+                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVSimilarMatch)
+                            elif self.nameClean in matchNameClean:
+                                if None not in (match.start_year, self.startYearClean):
+                                    newDeviation = abs(int(matchYearClean) - int(self.startYearClean))
+                                    deviation = min(deviation,newDeviation)
+                        
+                                    if deviation <= 2:
+                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVIncorrectYear)
+                        
+                        ProblemData.addSeries(self,ProblemData.ProblemType.CVNoMatch)
 
                 elif matchCounter == 1:
                     # One match
@@ -383,11 +412,11 @@ class Series:
                     elif len(matches['Allowed']) > 0:
                         results = matches['Allowed']
                     else:
-                        ProblemSeries(self,ProblemData.ProblemType.CVNoMatch)
+                        ProblemData.addSeries(self,ProblemData.ProblemType.CVNoMatch)
                         printResults("No valid results found for %s (%s). %s blacklisted results found." % (
                             self.name, self.startYear, len(matches['Blacklist'])), 5)
                     
-                if numAllowedMatches > 1 : ProblemSeries(self,ProblemData.ProblemType.MultipleMatch)
+                if numAllowedMatches > 1 : ProblemData.addSeries(self,ProblemData.ProblemType.MultipleMatch)
 
                 printResults("CV : Results = %s; Matches = %s" %
                             (numResults, numAllowedMatches), 5)
@@ -521,7 +550,7 @@ class Series:
 
         def fget(self):
             if self.startYear is not None:
-                return utilities.cleanYearString(self.startYear)
+                return utilities.getCleanYear(self.startYear)
 
         def fdel(self):
             del self._startYearClean

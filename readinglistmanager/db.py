@@ -125,6 +125,8 @@ class DataDB(DB):
         return results
 
     def findIssueMatches(self, seriesID):
+        results = None
+        
         try:
             #time.sleep(self.getCVSleepTimeRemaining())
             self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
