@@ -1,6 +1,4 @@
 from readinglistmanager import utilities
-#from readinglistmanager.series import Series
-#from readinglistmanager.issue import Issue
 from enum import Enum
 
 class ProblemData():
