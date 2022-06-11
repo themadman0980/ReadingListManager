@@ -93,11 +93,11 @@ class DataDB(DB):
         if config.Troubleshooting.update_clean_names:
             self.recreateCleanNames()
 
-    def getCVSleepTimeRemaining(self):
-        #get time since last CV API call
-        timeDif = (utilities.getCurrentTimeStamp()
-                   - self._lastSearchedTimestamp) / 1000
-        return max(0, config.CV.api_rate - timeDif)
+#    def getCVSleepTimeRemaining(self):
+#        #get time since last CV API call
+#        timeDif = (utilities.getCurrentTimeStamp()
+#                   - self._lastSearchedTimestamp) / 1000
+#        return max(0, config.CV.api_rate - timeDif)
 
     def cvSession():
         doc = "The Issue Details table name"
@@ -112,36 +112,32 @@ class DataDB(DB):
 
     def findVolumeMatches(self, name):
         results = None
-        if DataDB.searchCount < config.Troubleshooting.api_query_limit:
-            try:
-                #time.sleep(self.getCVSleepTimeRemaining())
-                self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
-                results = self.cvSession.volume_list(
-                    params={"filter": "name:%s" % (name)})
-            except Exception as e:
-                printResults(
-                    "There was an error processing CV search for %s" % (name), 4)
-                printResults(str(e), 4)
+        try:
+            #time.sleep(self.getCVSleepTimeRemaining())
+            self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
+            results = self.cvSession.volume_list(
+                params={"filter": "name:%s" % (name)})
+        except Exception as e:
+            printResults(
+                "There was an error processing CV search for %s" % (name), 4)
+            printResults(str(e), 4)
 
         return results
 
     def findIssueMatches(self, seriesID):
-        if DataDB.searchCount < config.Troubleshooting.api_query_limit:
-            try:
-                #time.sleep(self.getCVSleepTimeRemaining())
-                self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
-                results = self.cvSession.issue_list(
-                    params={"filter": "volume:%s" % (seriesID)})
-                DataDB.searchCount += 1
-                if len(results) == 0:
-                    printResults(
-                        "Warning: No issues found for series [%s]" % (seriesID), 4)
-            except Exception as e:
+        try:
+            #time.sleep(self.getCVSleepTimeRemaining())
+            self._lastSearchedTimestamp = utilities.getCurrentTimeStamp()
+            results = self.cvSession.issue_list(
+                params={"filter": "volume:%s" % (seriesID)})
+            DataDB.searchCount += 1
+            if len(results) == 0:
                 printResults(
-                    "Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
-                printResults(str(e), 4)
-        else:
-            results = None
+                    "Warning: No issues found for series [%s]" % (seriesID), 4)
+        except Exception as e:
+            printResults(
+                "Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
+            printResults(str(e), 4)
 
         return results
 
@@ -182,7 +178,7 @@ class DataDB(DB):
         cursor.close()
 
     def addSeries(self, series):
-        if series.hasValidID() and config.DB.cache_results:
+        if series.hasValidID():
             dateAdded = utilities.getTodaysDate()
             printResults("Adding %s (%s) [%s] to the DB" % (
                 series.name, series.startYear, series.id), 5)
