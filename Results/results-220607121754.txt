@@ -1,4 +1,0 @@
-
-
-	Initialising...
-		Checking if source file exists: /config/workspace/Data/cv.db [CV]
