@@ -462,6 +462,9 @@ class Series:
 
         self.checkedCVVolumes = True
 
+#    def hasValidName(self):
+#        return self.name.isascii()
+
     def hasValidID(self):
         if self.id is not None:
             return str(self.id).isdigit()
@@ -486,6 +489,8 @@ class Series:
             if value != "":
                 self._name = value
                 self._nameClean = Series.getCleanName(self.name)
+#                if not self.hasValidName():
+#                    ProblemData.addSeries(self,ProblemData.ProblemType.InvalidSeriesNameEncoding)
 
         def fdel(self):
             del self._name

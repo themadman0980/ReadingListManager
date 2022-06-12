@@ -84,7 +84,7 @@ class DataDB(DB):
     def __init__(self, source):
         super().__init__(source)
         self._lastSearchedTimestamp = 0
-        self._cvSession = Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(files.cvCacheFile,30))
+        self._cvSession = Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(files.cvCacheFile,60))
 
         if not isinstance(source, DataSource):
             printResults("Error: Invalid source type for CV data!")

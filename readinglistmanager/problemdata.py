@@ -10,9 +10,11 @@ class ProblemData():
         CVSimilarMatch = "Similar CV Match"
         CVIncorrectYear = "CV Match With Incorrect Year"
         MultipleMatch = "Multiple Matches"
+        InvalidSeriesNameEncoding = "Series name contains unicode characters"
         DBError = "DB Error"
         CVError = "CV Error"
         IssueError = "Issue Error"
+        IssueNotFound = "Issue Not Found In CV Series"
 
     problemCount = 0
 
@@ -34,16 +36,13 @@ class ProblemData():
             ProblemData._problemSeries.append(series)
 
 
-    def _checkForPartialMatch(self,nameClean,cvResults):
-        if self.type == ProblemData.ProblemType.CVNoMatch and cvResults is not None:
-            try:
-                for result in cvResults:
-                    cleanResultName = utilities.getDynamicName(result.name)
-                    if nameClean in cleanResultName:
-                        self.type = ProblemData.ProblemType.CVPartialMatch
-                        return
-            except AttributeError:
-                pass # Is issue, not series
+#    def _checkForPartialMatch(self,nameClean,cvResults):
+#        if self.type == ProblemData.ProblemType.CVNoMatch and cvResults is not None:
+#            for result in cvResults:
+#                cleanResultName = utilities.getDynamicName(result.name)
+#                if nameClean in cleanResultName:
+#                    self.type = ProblemData.ProblemType.CVPartialMatch
+#                    return
 
     @classmethod
     def exportToFile(self):
