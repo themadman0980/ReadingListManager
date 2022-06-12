@@ -3,7 +3,6 @@
 
 import unicodedata  # Needed to strip character accents
 import re
-import os
 from datetime import datetime
 from readinglistmanager import filemanager
 
@@ -40,6 +39,34 @@ def getDynamicName(string):
 
     return cleanString
 
+def hasValidEncoding(string):
+    return all(ord(c) < 128 for c in string)
+
+def fixEncoding(string):
+    utf8_string = (
+        unicodedata.normalize('NFKC', string).
+        encode('utf-8', errors='ignore').decode()
+    )
+
+    return utf8_string
+
+#def fixEncoding(string): 
+#    wrong = 'windows-1252'
+#    right = 'utf-8'
+#
+#    try:
+#        s1 = bytes(string, wrong)
+#    except:
+#        s1 = bytes(string, right)
+#
+#    try:
+#        s2 = s1.decode(right)
+#    except:
+#        s1 = bytes(string, right)
+#        s2 = s1.decode('utf-8')
+#
+#    return s2
+#
 
 def getCleanYear(string):
     cleanString = re.sub(yearStringCleanTemplate, '', str(string))
