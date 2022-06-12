@@ -75,7 +75,7 @@ class Series:
             except Exception as e:
                 ProblemData.addSeries(series,ProblemData.ProblemType.DBError)
                 print("Unable to process series : %s (%s) [%s]" % (
-                    series.name, series.startYear, series.seriesID))
+                    series.name, series.startYear, series.id))
                 print(str(e))
 
         dbCursor.close()
@@ -131,7 +131,8 @@ class Series:
                      (Series.cvMatchTypes['NoMatch'], Series.count), 3)  # No cv matches
 
     def __init__(self, curName, curStartYear, curID=None, curPublisher=None, curNumIssues=None, curDateAdded=None, curIssueList=None):
-        self._name = curName
+        self._name = ""
+        self.name = curName
         self._startYear = curStartYear
         self._publisher = curPublisher
         self._id = curID
@@ -143,7 +144,7 @@ class Series:
         self._getKey()
         if self._issueList is None:
             self._issueList = []
-        self._nameClean = Series.getCleanName(curName)
+        #self._nameClean = Series.getCleanName(curName)
         self._startYearClean = Series.getCleanStartYear(curStartYear)
         self.checkedCVVolumes = False
         self.checkedCVIssues = False
@@ -462,8 +463,14 @@ class Series:
 
         self.checkedCVVolumes = True
 
-#    def hasValidName(self):
-#        return self.name.isascii()
+    # Check series name has correct encoding
+#    def checkHasValidName(self):
+#        #if len(self.name) == len(self.name.encode())
+#        if not utilities.hasValidEncoding(self.name):
+#            self._name = utilities.fixEncoding(self.name)
+#            if not utilities.hasValidEncoding(self.name):
+#                ProblemData.addSeries(self,ProblemData.ProblemType.InvalidSeriesNameEncoding)
+
 
     def hasValidID(self):
         if self.id is not None:
@@ -486,11 +493,8 @@ class Series:
             return self._name
 
         def fset(self, value):
-            if value != "":
-                self._name = value
-                self._nameClean = Series.getCleanName(self.name)
-#                if not self.hasValidName():
-#                    ProblemData.addSeries(self,ProblemData.ProblemType.InvalidSeriesNameEncoding)
+            self._name = utilities.fixEncoding(value)
+            self._nameClean = Series.getCleanName(value)
 
         def fdel(self):
             del self._name

@@ -4,15 +4,13 @@ from enum import Enum
 class ProblemData():
 
     class ProblemType(Enum):
-        Invalid = "Invalid"
         CVNoResults = "No CV Results"
         CVNoMatch = "No CV Match"
         CVSimilarMatch = "Similar CV Match"
         CVIncorrectYear = "CV Match With Incorrect Year"
         MultipleMatch = "Multiple Matches"
-        InvalidSeriesNameEncoding = "Series name contains unicode characters"
+        InvalidSeriesNameEncoding = "Invalid Series Name Encoding"
         DBError = "DB Error"
-        CVError = "CV Error"
         IssueError = "Issue Error"
         IssueNotFound = "Issue Not Found In CV Series"
 
