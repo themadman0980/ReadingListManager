@@ -1,4 +1,5 @@
 readinglistmanager/__pycache__/
+.vscode/
 config.ini
 ReadingLists/*
 Results/*
