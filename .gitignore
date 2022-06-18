@@ -1,5 +1,9 @@
-ReadingLists/
-Results/
 readinglistmanager/__pycache__/
 config.ini
-Output/
+ReadingLists/*
+Results/*
+Output/*
+Data/*
+!Data/cv.db
+!ReadingLists/Example.cbl
+!Data/data.db
