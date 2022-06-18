@@ -46,6 +46,7 @@ def main():
     Issue.printSummaryResults()
     problemdata.ProblemData.printSummaryResults()
     problemdata.ProblemData.exportToFile()
+    ReadingList.generateCBLs(readingLists)
 
 if __name__ == "__main__":
     main()

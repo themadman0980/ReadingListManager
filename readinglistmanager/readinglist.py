@@ -4,7 +4,8 @@
 from readinglistmanager.utilities import printResults
 import os
 from readinglistmanager.issue import Issue, ReadingListIssue
-from readinglistmanager import config,datasource
+from readinglistmanager import config,datasource, utilities
+from readinglistmanager.filemanager import files
 
 
 class ReadingList:
@@ -24,6 +25,60 @@ class ReadingList:
                      (ReadingList.numCompleteSeriesMatches, ReadingList.count), 3)
         printResults("All issues matched: %s / %s" %
                      (ReadingList.numCompleteIssueMatches, ReadingList.count), 3)
+    
+    @classmethod
+    def generateCBLs(self,readingLists):
+        if readingLists is not None:
+            for list in readingLists:
+                if isinstance(list,ReadingList):
+                    list.writeToCBL()
+
+    def writeToCBL(self):
+        #sourcePath = self.source.file
+        if isinstance(self.source,datasource.Source):
+            sourceFolder = os.path.dirname(self.source.file)
+            # Set output to subdirectory of output folder
+            if isinstance(self.source,datasource.CBLSource):
+                destFolder = str(sourceFolder).replace(files.readingListDirectory,os.path.join(files.outputDirectory,"CBL"))
+            if isinstance(self.source,datasource.OnlineSource):
+                destFolder = str(sourceFolder).replace(files.dataDirectory,os.path.join(files.outputDirectory,"WEB"))
+        else:
+            # Set output file to output folder
+            destFolder = files.outputDirectory
+
+        fileName = self.name + ".cbl"
+
+        file = os.path.join(destFolder,fileName)
+        utilities.checkPath(file)
+
+        with open(file, 'w') as outputFile:
+
+            lines = []
+
+            lines.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+            lines.append("<ReadingList xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">")
+            lines.append("<Name>%s</Name>" % (self.name))
+            lines.append("<Books>")
+
+            #For each issue in arc
+            for issue in self.issueList:
+                if isinstance(issue,ReadingListIssue):
+                    if issue.hasValidID() or issue.series.hasValidID():
+                        lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"\">" % (issue.series.name,issue.issueNumber,issue.series.startYear))
+                        if issue.hasValidID(): lines.append("<IssueID>%s</IssueID>" % (issue.id))
+                        if issue.series.hasValidID(): lines.append("<SeriesID>%s</SeriesID>" % (issue.series.id))
+                        lines.append("</Book>")
+                    else:
+                        lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"\" />" % (issue.series.name,issue.issueNumber,issue.series.startYear))
+
+            lines.append("</Books>")
+            lines.append("<Matchers />")
+            lines.append("</ReadingList>")
+
+            outputFile.writelines(lines)
+
+            outputFile.close()
+
 
     def __init__(self, name, source, database, issueList=None, id=None):
         ReadingList.count += 1

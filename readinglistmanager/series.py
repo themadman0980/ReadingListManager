@@ -315,7 +315,7 @@ class Series:
                         (self.name, self.startYear), 4)
             self.cvResultsSeries = Series.database.findVolumeMatches(self.name)
 
-            if len(self.cvResultsSeries) == 0 and ':' in self.name:
+            if self.cvResultsSeries is not None and len(self.cvResultsSeries) == 0 and ':' in self.name:
                 modifiedName = self.name.replace(':','')
                 printResults("Info: Searching CV for series : %s (%s)" %
                             (modifiedName, self.startYear), 4)

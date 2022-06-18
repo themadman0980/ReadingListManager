@@ -6,34 +6,35 @@ from datetime import datetime
 
 timeString = datetime.today().strftime("%y%m%d%H%M%S")
 
-scriptDirectory = os.getcwd()
-#rootDirectory = os.path.dirname(scriptDirectory)
-dataDirectory = os.path.join(scriptDirectory, "Data")
-readingListDirectory = os.path.join(scriptDirectory, "ReadingLists")
-resultsDirectory = os.path.join(scriptDirectory, "Results")
+rootDirectory = os.getcwd()
+#rootDirectory = os.path.dirname(rootDirectory)
+dataDirectory = os.path.join(rootDirectory, "Data")
+readingListDirectory = os.path.join(rootDirectory, "ReadingLists")
+resultsDirectory = os.path.join(rootDirectory, "Results")
+outputDirectory = os.path.join(rootDirectory, "Output")
 
 dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
-configFile = os.path.join(scriptDirectory, 'config.ini')
+configFile = os.path.join(rootDirectory, 'config.ini')
 resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (timeString))
 problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (timeString))
 
 def checkDirectories():
 
-    directories = {dataDirectory,readingListDirectory,resultsDirectory}
+    directories = {dataDirectory,readingListDirectory,resultsDirectory,outputDirectory}
 
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    pass
-
 class FileManager():
     def __init__(self):
         self._cvCacheFile = cvCacheFile
         self._dataDirectory = dataDirectory
+        self._rootDirectory = rootDirectory
         self._readingListDirectory = readingListDirectory
         self._resultsDirectory = resultsDirectory
+        self._outputDirectory = outputDirectory
         self._resultsFile = resultsFile
         self._problemsFile = problemsFile
         self._dataFile = dataFile
@@ -65,6 +66,24 @@ class FileManager():
 
         return locals()
     dataDirectory = property(**dataDirectory())
+
+    def rootDirectory():
+        doc = "The rootDirectory property."
+
+        def fget(self):
+            return self._rootDirectory
+
+        return locals()
+    rootDirectory = property(**rootDirectory())
+
+    def outputDirectory():
+        doc = "The outputDirectory property."
+
+        def fget(self):
+            return self._outputDirectory
+
+        return locals()
+    outputDirectory = property(**outputDirectory())
 
     def readingListDirectory():
         doc = "The readingListDirectory property."

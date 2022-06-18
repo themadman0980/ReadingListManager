@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unicodedata  # Needed to strip character accents
-import re
+import re, os
 from datetime import datetime
 from readinglistmanager import filemanager
 
@@ -67,6 +67,11 @@ def fixEncoding(string):
 #
 #    return s2
 #
+
+def checkPath(string):
+    folder = os.path.dirname(string)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 def getCleanYear(string):
     cleanString = re.sub(yearStringCleanTemplate, '', str(string))
