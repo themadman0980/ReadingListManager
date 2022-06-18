@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 
 readingListDB = [
     {'SourceName': 'cmro', 'DBTables': {
-        'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
+        'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'
         }},
     #{'SourceName': 'dcro', 'DBTables': {
     #    'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
@@ -122,9 +122,9 @@ def getOnlineLists(database):
                     if numMatches > 1:
                         printResults("Warning: Multiple db entries found for issue with hrnum='%s' in %s" % (
                             listEntryID, readingList.name), 4)
-                    seriesName = entryMatches[0][3]
-                    seriesStartYear = entryMatches[0][4]
-                    seriesIssueNum = entryMatches[0][5]
+                    for issueEntry in entryMatches:
+                        _, _, _, seriesName, seriesStartYear, seriesIssueNum, _ = issueEntry
+
                     if seriesName is None or seriesStartYear is None:
                         printResults("Error: Invalid series data found for name='%s' startYear='%s')" % (seriesName,seriesStartYear),4)
                     else:

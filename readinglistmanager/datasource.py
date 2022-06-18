@@ -103,14 +103,15 @@ class DataSource(Source):
 class OnlineSource(Source):
     def __init__(self, name, file, tableDict):
         super().__init__(name, file, "WEB-DL")
-        printResults("Checking DB data in %s" % (file), 2)
+        printResults("Checking DB data in %s" % (file,), 2)
         try:
             self._tableReadingListTitles = tableDict['ReadingLists']
             self._tableReadingListDetails = tableDict['ReadingListDetails']
             self._tableIssueDetails = tableDict['IssueDetails']
         except Exception as e:
+            print("Caught error in OnlineSource:", e)
             printResults(
-                "Warning : Unable to find DB table details for %s" % (self.name), 5)
+                "Warning : Unable to find DB table details for %s: %s" % (self.name, e), 5)
 
     def tableReadingListTitles():
         doc = "The Reading List Title table name."

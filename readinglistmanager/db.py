@@ -231,16 +231,17 @@ class OnlineDB(DB):
         printResults("Getting list names for source: %s" %
                      (self.source.name), 3)
         if isinstance(self.source, OnlineSource):
+            readingListTitles = []
             cursor = self.connection.cursor()
 
             try:
-                listQuery = ''' SELECT * FROM %s ''' % (
+                listQuery = ''' SELECT olistnum, name FROM %s ''' % (
                     self.source.tableReadingListTitles)
                 readingListTitles = cursor.execute(listQuery).fetchall()
             except Exception as e:
-                printResults("Warning : Unable to find DB table details for %s" % (
-                    self.source.name), 5)
-                print(e)
+                print("Caught error:", e)
+                printResults("Warning : Unable to find DB table details for %s: %s" % (
+                    self.source.name, e), 5)
 
             cursor.close()
 
@@ -250,9 +251,10 @@ class OnlineDB(DB):
 
     def getIssueDetails(self, issueID):
         cursor = self.connection.cursor()
-        entryQuery = ''' SELECT * FROM %s WHERE hrnum=\"%s\" ''' % (
-            self.source.tableIssueDetails, issueID)
-        entryMatches = cursor.execute(entryQuery).fetchall()
+        entryQuery = ''' SELECT hrnum, pubdate, title, series, start_year, issue, story FROM %s WHERE hrnum=?; ''' % (
+            self.source.tableIssueDetails, )
+        entryParam = (issueID, )
+        entryMatches = cursor.execute(entryQuery, entryParam).fetchall()
 
         return entryMatches
 
@@ -262,9 +264,10 @@ class OnlineDB(DB):
         cursor = self.connection.cursor()
         try:
             # Get all entries in readingList
-            listQuery = ''' SELECT * FROM %s WHERE olistnum=\"%s\" ''' % (
-                self.source.tableReadingListDetails, listEntryID)
-            listResults = cursor.execute(listQuery).fetchall()
+            listQuery = ''' SELECT olistnum, hrnum, read_order FROM %s WHERE olistnum=?; ''' % (
+                self.source.tableReadingListDetails, )
+            listParams = (listEntryID, )
+            listResults = cursor.execute(listQuery, listParams).fetchall()
 
         except Exception as e:
             printResults("Warning : Unable to find list details for %s : %s" % (
