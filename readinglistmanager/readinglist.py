@@ -70,8 +70,7 @@ class ReadingList:
                 if isinstance(issue,ReadingListIssue):
                     if issue.hasValidID() or issue.series.hasValidID():
                         lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (issue.series.name,issue.issueNumber,issue.series.startYear,issueYear))
-                        if issue.hasValidID(): lines.append("<IssueID>%s</IssueID>" % (issue.id))
-                        if issue.series.hasValidID(): lines.append("<SeriesID>%s</SeriesID>" % (issue.series.id))
+                        lines.append("<ComicVine Series=\"%s\" Issue=\"%s\" />" % (issue.series.id,issue.id))
                         lines.append("</Book>")
                     else:
                         lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" % (issue.series.name,issue.issueNumber,issue.series.startYear,issueYear))
