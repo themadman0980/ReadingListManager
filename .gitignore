@@ -6,6 +6,8 @@ Results/*
 Output/*
 Data/*
 !Data/cv.db
+!Data/SeriesOverrides.json
+!Data/views.txt
 !ReadingLists/Example.cbl
 !Data/data.db
 *.DS_Store

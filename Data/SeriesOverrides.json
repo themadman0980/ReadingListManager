@@ -1,0 +1,42 @@
+[
+    {
+        "volumeComicvineID": "2008",
+        "altSeriesDynamicName": "talestoastonish",
+        "altSeriesStartYear": "1958"
+    },
+    {
+        "volumeComicvineID": "2859",
+        "altSeriesDynamicName": "howardduck",
+        "altSeriesStartYear": "1976"
+    },
+    {
+        "volumeComicvineID": "18220",
+        "altSeriesDynamicName": "ironman",
+        "altSeriesStartYear": "2005"
+    },
+    {
+        "volumeComicvineID": "120239",
+        "altSeriesDynamicName": "punisherannual",
+        "altSeriesStartYear": "2019"
+    },
+    {
+        "volumeComicvineID": "122487",
+        "altSeriesDynamicName": "doctorstrangeannual",
+        "altSeriesStartYear": "2019"
+    },
+    {
+        "volumeComicvineID": "85762",
+        "altSeriesDynamicName": "howardduck",
+        "altSeriesStartYear": "2016"
+    },
+    {
+        "volumeComicvineID": "86251",
+        "altSeriesDynamicName": "silk",
+        "altSeriesStartYear": "2016"
+    },
+    {
+        "volumeComicvineID": "86723",
+        "altSeriesDynamicName": "weirdworld",
+        "altSeriesStartYear": "2016"
+    }
+]
