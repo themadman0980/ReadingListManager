@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from readinglistmanager.utilities import printResults
-import os
+import os, datetime
 from readinglistmanager.issue import Issue, ReadingListIssue
 from readinglistmanager import config,datasource, utilities
 from readinglistmanager.filemanager import files
@@ -62,7 +62,7 @@ class ReadingList:
 
             #For each issue in arc
             for issue in self.issueList:
-                if issue.coverDate is not None:
+                if issue.coverDate is not None and isinstance(issue.coverDate,datetime.datetime):
                     issueYear = issue.coverDate.year
                 else:
                     issueYear = None

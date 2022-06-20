@@ -16,7 +16,7 @@ class Series:
 
     count = 0
     dbCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
-    overrideCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
+    overrideCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0, 'Invalid': 0}
     cvCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
     cvMatchTypes = {'NoMatch': 0, 'OneMatch': 0,
                     'MultipleMatch': 0, 'BlacklistOnlyMatch': 0}
@@ -112,35 +112,39 @@ class Series:
             if series.hasCompleteIssueList():
                 seriesComplete += 1
 
+        overrideCount = Series.dbCounters['NotFound']
+        CVCount = overrideCount - Series.overrideCounters['Found']
+        unfoundCount = CVCount - Series.cvCounters['Found']
+
         # Summary of results:
         printResults("Series: %s" % (Series.count), 2, True)
         printResults("DB Searches: %s, CV Searches = %s" %
                      (Series.dbCounters['SearchCount'], Series.cvCounters['SearchCount']), 3)
-        printResults("Number of series matched: %s / %s" %
-                     (seriesMatched, seriesCount), 3)
-        printResults("Number of series complete: %s / %s" %
-                     (seriesComplete, seriesCount), 3)
+        printResults("Number of series matched: %s / %s    (%s)" %
+                     (seriesMatched, seriesCount,"{:.0%}".format(seriesMatched/seriesCount)), 3)
+        printResults("Number of series complete: %s / %s    (%s)" %
+                     (seriesComplete, seriesCount,"{:.0%}".format(seriesComplete/seriesCount)), 3)
         printResults("*** DB ***",3)
-        printResults("Match (DB) = %s / %s" %
+        printResults("Match = %s / %s" %
                      (Series.dbCounters['Found'], Series.count), 4)  # One match
-        printResults("No Match (DB) = %s / %s" %
+        printResults("No Match = %s / %s" %
                      (Series.dbCounters['NotFound'], Series.count), 4)  # One match
         printResults("*** OVERRIDE ***",3)
         printResults("Match = %s / %s" %
-                     (Series.overrideCounters['Found'], Series.overrideCounters['SearchCount']), 4)  # Series ID match found in overrides file
-        printResults("No Match = %s / %s" %
-                     (Series.overrideCounters['NotFound'], Series.overrideCounters['SearchCount']), 4)  # Series ID in overrides file not found on CV
+                     (Series.overrideCounters['Found'], overrideCount), 4)  # Series ID match found in overrides file
+        printResults("Invalid ID = %s / %s" %
+                     (Series.overrideCounters['Invalid'], overrideCount), 4)  # Series ID in overrides file not found on CV
         printResults("*** CV ***",3)
         printResults("Match (Single) = %s / %s" %
-                     (Series.cvMatchTypes['OneMatch'], Series.count), 4)  # One match
+                     (Series.cvMatchTypes['OneMatch'], CVCount), 4)  # One match
         printResults("Match (Multiple) = %s / %s" %
-                     (Series.cvMatchTypes['MultipleMatch'], Series.count), 4)  # Multiple series matches
+                     (Series.cvMatchTypes['MultipleMatch'], CVCount), 4)  # Multiple series matches
         printResults("*** NOT FOUND ***",3)
         # Blacklist publisher matches only
         printResults("No Match (Blacklist) = %s / %s" %
-                     (Series.cvMatchTypes['BlacklistOnlyMatch'], Series.count), 4)
+                     (Series.cvMatchTypes['BlacklistOnlyMatch'], unfoundCount), 4)
         printResults("No Match (Unfound) = %s / %s" %
-                     (Series.cvMatchTypes['NoMatch'], Series.count), 4)  # No cv matches
+                     (Series.cvMatchTypes['NoMatch'], unfoundCount), 4)  # No cv matches
 
     def __init__(self, curName, curStartYear, curID=None, curPublisher=None, curNumIssues=None, curDateAdded=None, curIssueList=None):
         self._name = ""
@@ -341,7 +345,7 @@ class Series:
                 self.numIssues = result.issue_count
                 Series.addToDB(self)
             else:
-                Series.overrideCounters['NotFound'] += 1
+                Series.overrideCounters['Error'] += 1
                 ProblemData.addSeries(self,ProblemData.ProblemType.OverrideError)
 
         return len(results) > 0
@@ -376,7 +380,7 @@ class Series:
                 for issue in results:
                     curIssue = self.getIssue(issue.number, issue.id_)
                     curIssue.dateAdded = utilities.getTodaysDate()
-                    curIssue.coverDate = utilities.parseDate(issue.cover_date)
+                    curIssue.coverDate = utilities.getDateFromString(issue.cover_date)
                     curIssue.name = utilities.stripSymbols(issue.name)
                     if curIssue.id is None:
                         curIssue.id = issue.id_

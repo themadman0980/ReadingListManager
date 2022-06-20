@@ -31,12 +31,12 @@ def generateNewConfig(configFile):
 
         lines.append('[Troubleshooting]')
         lines.append('process_cbl = True #Validate entries in CBL files')
-        lines.append('process_web_dl = False #Validate entries in databases')
+        lines.append('process_web_dl = True #Validate entries in databases')
         lines.append('update_clean_names = False #Regenerate CleanName field for series in db')
         lines.append('verbose = False #Enable verbose logging')
 
         for line in lines:
-            if line is not None:
+            if isinstance(line, str):
                 file.write(line + '\n')
 
 checkConfig()

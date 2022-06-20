@@ -28,12 +28,12 @@ class Issue:
     @classmethod
     def printSummaryResults(self):
         printResults("Issues: %s" % (Issue.count), 2, True)
-        printResults("ID Match (Exact) = %s / %s" %
-                     (Issue.dbMatches, Issue.count), 3)  # One match
-        printResults("ID Match (Multiple) = %s / %s" %
-                     (Issue.dbMultipleMatches, Issue.count), 3)  # One match
-        printResults("ID Match (None) = %s / %s" %
-                     (Issue.dbNoMatch, Issue.count), 3)  # One match
+        printResults("ID Match (Exact) = %s / %s    (%s)" %
+                     (Issue.dbMatches, Issue.count,"{:.1%}".format(Issue.dbMatches/Issue.count)), 3)  # One match
+        printResults("ID Match (Multiple) = %s / %s    (%s)" %
+                     (Issue.dbMultipleMatches, Issue.count,"{:.1%}".format(Issue.dbMultipleMatches/Issue.count)), 3)  # One match
+        printResults("ID Match (None) = %s / %s    (%s)" %
+                     (Issue.dbNoMatch, Issue.count,"{:.1%}".format(Issue.dbNoMatch/Issue.count)), 3)  # One match
 
     def __eq__(self, other):
         if (isinstance(other, Issue)):
