@@ -98,15 +98,12 @@ class Issue:
         if self.series.hasValidID() and self.issueNumber is not None:
             try:
                 dbCursor = database.connection.cursor()
-                lookupIssuesQuery = ''' SELECT * FROM cv_issues WHERE VolumeID=\"%s\" AND IssueNumber=\"%s\" ''' % (
-                    self.series.id, self.issueNumber)
+                lookupIssuesQuery = 'SELECT * FROM cv_issues WHERE VolumeID=? AND IssueNumber=?'
                 # printResults("Looking up series: %s (%s)" % (nameClean, year), 3)
-                lookupMatches = dbCursor.execute(lookupIssuesQuery).fetchall()
+                lookupMatches = dbCursor.execute(lookupIssuesQuery,(self.series.id, self.issueNumber)).fetchall()
                 dbCursor.close()
             except Exception as e:
-                print("Error while retrieving issues for [%s]" % (
-                    self.series.id))
-                print(repr(e))
+                printResults("Error while retrieving issues for [%s] : %s" % (self.series.id,e),4)
 
             if lookupMatches is not None and len(lookupMatches) > 0:
                 if len(lookupMatches) > 1:
@@ -116,7 +113,7 @@ class Issue:
                 Issue.dbMatches += 1
                 self.id = lookupMatches[0][0]
                 self.name = lookupMatches[0][2]
-                self.coverDate = lookupMatches[0][3]
+                self.coverDate = readinglistmanager.utilities.getDateFromString(lookupMatches[0][3])
             else:
                 Issue.dbNoMatch += 1
                 if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
@@ -206,6 +203,15 @@ class Issue:
             del self._coverDate
         return locals()
     coverDate = property(**coverDate())
+    
+    def year():
+        doc = "The issue year"
+
+        def fget(self):
+            return self._coverDate
+
+        return locals()
+    year = property(**year())
 
 
 class ReadingListIssue(Issue):

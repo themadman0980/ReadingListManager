@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from readinglistmanager import utilities
+import readinglistmanager
+import os,json
+from readinglistmanager import utilities, filemanager
 from readinglistmanager.problemdata import ProblemData
 from readinglistmanager.utilities import printResults
 from readinglistmanager import config
@@ -10,11 +12,11 @@ from readinglistmanager.issue import Issue
 
 _seriesList = {}  # Set of all series
 
-
 class Series:
 
     count = 0
     dbCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
+    overrideCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
     cvCounters = {'SearchCount': 0, 'Found': 0, 'NotFound': 0}
     cvMatchTypes = {'NoMatch': 0, 'OneMatch': 0,
                     'MultipleMatch': 0, 'BlacklistOnlyMatch': 0}
@@ -38,39 +40,41 @@ class Series:
                 name, startYear), 5)
             return None
 
+    def addToDB(self):
+        Series.addToDB(self)
+
     @classmethod
     def addToDB(self, series):
 
         dbCursor = Series.database.connection.cursor()
-        checkVolumeQuery = ''' SELECT * FROM cv_volumes WHERE VolumeID=%s ''' % (
-            series.id)
-        checkResults = dbCursor.execute(checkVolumeQuery).fetchall()
+        checkVolumeQuery = 'SELECT * FROM cv_volumes WHERE VolumeID=?'
+        checkResults = dbCursor.execute(checkVolumeQuery,(series.id,)).fetchall()
 
         if len(checkResults) > 0:
             # Match already exists!
             printResults("Series %s (%s) [%s] already exists in the DB!" % (
-                series.name, series.startYear, series.ID))
+                series.name, series.startYear, series.id),4)
         elif isinstance(series, Series) and series.hasValidID():
-            dateAdded = utilities.getTodaysDate()
-            if series.numIssues or series.publisher:
-                if series.numIssues and series.publisher:
-                    # Both!
-                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
-                elif series.numIssues:
-                    # NumIssues only
-                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, dateAdded)
-                else:
-                    # Publisher only
-                    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,Publisher,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.publisher, dateAdded)
-            else:
-                volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
-                                        VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
+            volumeQuery = 'INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded) VALUES (?,?,?,?,?,?,?)'
+            #if series.numIssues or series.publisher:
+            #    if series.numIssues and series.publisher:
+            #        # Both!
+            #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded)
+            #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
+            #    elif series.numIssues:
+            #        # NumIssues only
+            #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,DateAdded)
+            #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, dateAdded)
+            #    else:
+            #        # Publisher only
+            #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,Publisher,DateAdded)
+            #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.publisher, dateAdded)
+            #else:
+            #    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
+            #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
             try:
                 # Only add issues with CV match!
-                dbCursor.execute(volumeQuery)
+                dbCursor.execute(volumeQuery,series.dbEntry)
                 Series.database.connection.commit()
             except Exception as e:
                 ProblemData.addSeries(series,ProblemData.ProblemType.DBError)
@@ -116,19 +120,27 @@ class Series:
                      (seriesMatched, seriesCount), 3)
         printResults("Number of series complete: %s / %s" %
                      (seriesComplete, seriesCount), 3)
+        printResults("*** DB ***",3)
         printResults("Match (DB) = %s / %s" %
-                     (Series.dbCounters['Found'], Series.count), 3)  # One match
+                     (Series.dbCounters['Found'], Series.count), 4)  # One match
         printResults("No Match (DB) = %s / %s" %
-                     (Series.dbCounters['NotFound'], Series.count), 3)  # One match
-        printResults("Match (CV-Single) = %s / %s" %
-                     (Series.cvMatchTypes['OneMatch'], Series.count), 3)  # One match
-        printResults("Match (CV-Multiple) = %s / %s" %
-                     (Series.cvMatchTypes['MultipleMatch'], Series.count), 3)  # Multiple series matches
+                     (Series.dbCounters['NotFound'], Series.count), 4)  # One match
+        printResults("*** OVERRIDE ***",3)
+        printResults("Match = %s / %s" %
+                     (Series.overrideCounters['Found'], Series.overrideCounters['SearchCount']), 4)  # Series ID match found in overrides file
+        printResults("No Match = %s / %s" %
+                     (Series.overrideCounters['NotFound'], Series.overrideCounters['SearchCount']), 4)  # Series ID in overrides file not found on CV
+        printResults("*** CV ***",3)
+        printResults("Match (Single) = %s / %s" %
+                     (Series.cvMatchTypes['OneMatch'], Series.count), 4)  # One match
+        printResults("Match (Multiple) = %s / %s" %
+                     (Series.cvMatchTypes['MultipleMatch'], Series.count), 4)  # Multiple series matches
+        printResults("*** NOT FOUND ***",3)
         # Blacklist publisher matches only
-        printResults("No Match (CV-Blacklist) = %s / %s" %
-                     (Series.cvMatchTypes['BlacklistOnlyMatch'], Series.count), 3)
+        printResults("No Match (Blacklist) = %s / %s" %
+                     (Series.cvMatchTypes['BlacklistOnlyMatch'], Series.count), 4)
         printResults("No Match (Unfound) = %s / %s" %
-                     (Series.cvMatchTypes['NoMatch'], Series.count), 3)  # No cv matches
+                     (Series.cvMatchTypes['NoMatch'], Series.count), 4)  # No cv matches
 
     def __init__(self, curName, curStartYear, curID=None, curPublisher=None, curNumIssues=None, curDateAdded=None, curIssueList=None):
         self._name = ""
@@ -141,7 +153,7 @@ class Series:
         self._issueList = curIssueList
         self._cvResultsSeries = None
         self._cvResultsIssues = None
-        self._getKey()
+        self.key = Series.getKey(self.name, self.startYear)
         if self._issueList is None:
             self._issueList = []
         #self._nameClean = Series.getCleanName(curName)
@@ -162,9 +174,6 @@ class Series:
 
     def __hash__(self):
         return hash((self.nameClean, self.startYearClean))
-
-    def _getKey(self):
-        self.key = Series.getKey(self.name, self.startYear)
 
     @classmethod
     def getKey(self, seriesName, seriesStartYear):
@@ -203,7 +212,7 @@ class Series:
             if config.verbose:
                 printResults("Validating series : %s (%s) [%s]" % (
                     self.name, self.startYear, self.id), 3)
-
+            
             # ID missing and DB hasn't been checked yet
             self.findDBSeriesID()
 
@@ -214,34 +223,38 @@ class Series:
                 printResults("DB match : %s" % (self.id), 4)
 
             if not self.hasValidID():
-                # No match found in DB - check CV
-                self.findCVSeriesID()
+                # Check if series exists in overrides file
+                self.findOverrideSeriesID()
 
-                # If a new series id match was found in CV, check for volume issue details on CV
-                if self.hasValidID():
-                    self.findCVIssueID()
+                # No match found in DB or AltSeriesDetails file - check CV
+                if not self.hasValidID():
+                    self.findCVSeriesID()
 
-            for issue in self.issueList:
-                # Check if issues exist in DB
-                issue.validate(Series.database)
+                    # If a new series id match was found in CV, check for volume issue details on CV
+                    if self.hasValidID():
+                        self.findCVIssueID()
 
-                # If no matching issue was found in the DB
-                if issue.id is None:
-                    self.findCVIssueID()
+            if self.hasValidID():
+                for issue in self.issueList:
+                    # Check if issues exist in DB
                     issue.validate(Series.database)
+
+                    # If no matching issue was found in the DB
+                    if issue.id is None:
+                        self.findCVIssueID()
+                        issue.validate(Series.database)
 
     def findDBSeriesID(self):
         lookupMatches = []
         Series.dbCounters['SearchCount'] += 1
         try:
             dbCursor = Series.database.connection.cursor()
-            lookupVolumeQuery = ''' SELECT * FROM cv_volumes WHERE NameClean=\"%s\" AND StartYear=\"%s\" ''' % (
-                self.nameClean, self.startYearClean)
+            lookupVolumeQuery = 'SELECT VolumeID,Name,StartYear,NumIssues,Publisher FROM cv_volumes WHERE NameClean=? AND StartYear=?'
             if config.verbose:
                 printResults("Searching CV cache for %s (%s)" %
                              (self.nameClean, self.startYearClean), 4)
             # printResults("Looking up series: %s (%s)" % (nameClean, year), 3)
-            lookupMatches = dbCursor.execute(lookupVolumeQuery).fetchall()
+            lookupMatches = dbCursor.execute(lookupVolumeQuery,(self.nameClean, self.startYearClean)).fetchall()
             if config.verbose:
                 printResults("%s series matches found in CV Cache for %s (%s)" % (
                     len(lookupMatches), self.name, self.startYear), 4)
@@ -259,14 +272,94 @@ class Series:
                 printResults("Warning: Multiple DB matches found for %s (%s)" % (
                     self.nameClean, self.startYearClean), 4)
             # There was an exact match. Check publisher preferences
-            self.id = lookupMatches[0][0]
-            self.publisher = lookupMatches[0][4]
-            self.numIssues = lookupMatches[0][3]
+            self.id, self.name, self.startYear, self.numIssues, self.publisher = lookupMatches[0]
             Series.dbCounters['Found'] += 1
         else:
             Series.dbCounters['NotFound'] += 1
 
         self.checkedDB = True
+
+    def findSeriesData(self):
+        found = self.findDBSeriesData()
+
+        if not found:
+            # CV search for series ID
+            self.findCVSeriesData()
+
+
+    def findDBSeriesData(self):
+        if self.hasValidID():
+            lookupMatches = []
+            Series.overrideCounters['SearchCount'] += 1
+            try:
+                dbCursor = Series.database.connection.cursor()
+                lookupVolumeQuery = 'SELECT Name,StartYear,NumIssues,Publisher FROM cv_volumes WHERE VolumeID=?'
+                if config.verbose:
+                    printResults("Searching CV cache for %s" %
+                                (self.id), 4)
+                lookupMatches = dbCursor.execute(lookupVolumeQuery,(self.id,)).fetchall()
+                if config.verbose:
+                    printResults("%s series matches found in CV Cache for %s" % (
+                        len(lookupMatches), self.id), 4)
+                dbCursor.close()
+            except Exception as e:
+                ProblemData.addSeries(self,ProblemData.ProblemType.DBError)
+                printResults("Error while lookup up series [%s] : %s" % (self.id,e),4)
+
+            if lookupMatches is not None and len(lookupMatches) > 0:
+                if len(lookupMatches) > 1:
+                    ProblemData.addSeries(self,ProblemData.ProblemType.MultipleMatch)
+                    printResults("Warning: Multiple DB matches found for [%s]" % (self.id,), 4)
+                
+                # There was an exact match. Check publisher preferences
+                self.id, self.startYear, self.numIssues, self.publisher = lookupMatches[0]
+                
+                #self.id = lookupMatches[0][0]
+                #self.publisher = lookupMatches[0][4]
+                #self.numIssues = lookupMatches[0][3]
+                
+                Series.overrideCounters['Found'] += 1
+
+            self.checkedDB = True
+            return len(lookupMatches) > 0
+
+    def findCVSeriesData(self):
+        results = []
+
+        if self.hasValidID():
+            result = Series.database.findVolumeDetails(self.id)
+            
+            self.cvResultsSeries = result
+
+            if result is not None:
+                Series.overrideCounters['Found'] += 1
+
+                # Exact match found for ID!
+                self.name = result.name
+                self.startYear = result.start_year
+                self.publisher = result.publisher.name
+                self.numIssues = result.issue_count
+                Series.addToDB(self)
+            else:
+                Series.overrideCounters['NotFound'] += 1
+                ProblemData.addSeries(self,ProblemData.ProblemType.OverrideError)
+
+        return len(results) > 0
+
+    def findOverrideSeriesID(self):
+        if self.key:
+            try:
+                altDetails = overrideSeriesData[self.key]
+
+                seriesID = altDetails['volumeComicvineID']
+                if Series.isValidID(seriesID):
+                    self.id = seriesID
+                    self.findSeriesData()
+                else:
+                    ProblemData.addSeries(self,ProblemData.ProblemType.OverrideError)
+            except KeyError:
+                pass
+
 
     def findCVIssueID(self):
         if self.hasValidID() and not self.checkedCVIssues and config.CV.check_issues:
@@ -471,11 +564,15 @@ class Series:
 #            if not utilities.hasValidEncoding(self.name):
 #                ProblemData.addSeries(self,ProblemData.ProblemType.InvalidSeriesNameEncoding)
 
+    @classmethod
+    def isValidID(self,ID):
+        if ID is not None:
+            isDigit = str(ID).isdigit()
+            return isDigit
+        return False
 
     def hasValidID(self):
-        if self.id is not None:
-            return str(self.id).isdigit()
-        return False
+        return Series.isValidID(self.id)
 
     def hasCompleteDetails(self):
         if self.hasValidID() and self.hasCompleteIssueList() and None not in (self.name, self.startYear, self.publisher, self.numIssues):
@@ -500,6 +597,18 @@ class Series:
             del self._name
         return locals()
     name = property(**name())
+
+    def dbEntry():
+        doc = "A tuple of all the DB fields found in data.db"
+
+        def fget(self):
+            dateAdded = utilities.getTodaysDate()
+            data = (self.id, self.name, self.nameClean, self.startYear, self.numIssues, self.publisher, dateAdded)
+            return data
+
+        return locals()
+    dbEntry = property(**dbEntry())
+
 
     def startYear():
         doc = "The series' start year"
@@ -538,7 +647,7 @@ class Series:
             return self._id
 
         def fset(self, value):
-            if str(value).isdigit():
+            if Series.isValidID(value):
                 self._id = value
 
         def fdel(self):
@@ -621,3 +730,16 @@ class Series:
             del self._cvResultsSeries
         return locals()
     cvResultsSeries = property(**cvResultsSeries())
+
+def getSeriesOverrideDetails():
+    seriesAltData = {}
+
+    altSeriesDataFile = open(os.path.join(filemanager.files.dataDirectory,'SeriesOverrides.json'),'r')
+    jsonData = json.load(altSeriesDataFile)
+    for altSeries in jsonData:
+        dictKey = Series.getKey(altSeries['altSeriesDynamicName'],altSeries['altSeriesStartYear'])
+        seriesAltData[dictKey] = altSeries
+
+    return seriesAltData
+
+overrideSeriesData = getSeriesOverrideDetails()

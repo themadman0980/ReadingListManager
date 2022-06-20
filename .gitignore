@@ -8,3 +8,4 @@ Data/*
 !Data/cv.db
 !ReadingLists/Example.cbl
 !Data/data.db
+*.DS_Store

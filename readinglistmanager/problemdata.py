@@ -13,6 +13,7 @@ class ProblemData():
         DBError = "DB Error"
         IssueError = "Issue Error"
         IssueNotFound = "Issue Not Found In CV Series"
+        OverrideError = "Override ID not found"
 
     problemCount = 0
 

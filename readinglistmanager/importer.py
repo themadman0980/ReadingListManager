@@ -9,17 +9,10 @@ from readinglistmanager.series import Series
 from readinglistmanager.issue import Issue
 import xml.etree.ElementTree as ET
 
-readingListDB = [
-    {'SourceName': 'cmro', 'DBTables': {
-        'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'
-        }},
-    #{'SourceName': 'dcro', 'DBTables': {
-    #    'ReadingLists': 'olists', 'ReadingListDetails': 'olistcom', 'IssueDetails': 'comics'
-    #    }}
-    ]
-
+dbTables = {'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'}
 
 def parseCBLfiles(database):
+
     readingLists = []
 
     printResults("Checking CBL files in %s" %
@@ -77,66 +70,74 @@ def getOnlineLists(database):
 
     onlineLists = []
 
-    for listSourceObject in readingListDB:
-        # Create Source object
-        sourceName = listSourceObject['SourceName']
-        sourceFile = os.path.join(
-            filemanager.files.dataDirectory, sourceName + ".db")
-        sourceTable = listSourceObject['DBTables']
+    # Get list of DB's from /Data directory
+    for root,dir,files in os.walk(filemanager.files.dataDirectory + '/'):
+        for file in files:
+            if file.endswith(".db"):
+                if not (file == "cv.db" or file == "data.db" or file == "cbro.db"):
+                    try:
+                        # Create Source object
+                        #sourceName = listSourceObject['SourceName']
+                        #sourceFile = os.path.join(filemanager.files.dataDirectory, sourceName + ".db")
+                        #sourceTable = listSourceObject['DBTables']
+                        filePath = os.path.join(root, file)
+                        fileName = str(file).replace(".db","").upper()
 
-        curSource = datasource.OnlineSource(
-            sourceName, sourceFile, sourceTable)
+                        curSource = datasource.OnlineSource(filePath,fileName,dbTables)
 
-        # Create DB connection
-        curDB = db.OnlineDB(curSource)
+                        # Create DB connection
+                        curDB = db.OnlineDB(curSource)
 
-        curListNames = curDB.getListNames()
+                        curListNames = curDB.getListNames()
 
-        for readingList in curListNames:
-            listID = readingList[0]
-            listName = readingList[1]
+                        for readingList in curListNames:
+                            listID = readingList[0]
+                            listName = readingList[1]
 
-            curReadingList = ReadingList(
-                listName, curSource, database, None, listID)
+                            curReadingList = ReadingList(
+                                listName, curSource, database, None, listID)
 
-            # Get all reading list entries from readinglist DB table
-            printResults("Getting issue details for %s" % (curReadingList.name), 3)
-            curListDetails = curDB.getListDetails(curReadingList.id)
+                            # Get all reading list entries from readinglist DB table
+                            printResults("Getting issue details for %s" % (curReadingList.name), 3)
+                            curListDetails = curDB.getListDetails(curReadingList.id)
 
-            count = len(curListDetails)
-            i = 0
+                            count = len(curListDetails)
+                            i = 0
 
-            # Get details for each list entry from issue DB table
-            for listEntry in curListDetails:
-                i += 1
-                printResults("Processing %s / %s" % (i,count),4,False,True)
-                listEntryNum = listEntry[1]
-                listEntryID = listEntry[2]
+                            # Get details for each list entry from issue DB table
+                            for listEntry in curListDetails:
+                                i += 1
+                                printResults("Processing %s / %s" % (i,count),4,False,True)
+                                listEntryNum = listEntry[1]
+                                listEntryID = listEntry[2]
 
-                entryMatches = curDB.getIssueDetails(listEntryID)
-                #printResults("%s entries found for hrnum='%s'" % (len(entryMatches), listEntryID), 5)
+                                entryMatches = curDB.getIssueDetails(listEntryID)
+                                #printResults("%s entries found for hrnum='%s'" % (len(entryMatches), listEntryID), 5)
 
-                numMatches = len(entryMatches)
+                                numMatches = len(entryMatches)
 
-                if numMatches > 0:
-                    if numMatches > 1:
-                        printResults("Warning: Multiple db entries found for issue with hrnum='%s' in %s" % (
-                            listEntryID, readingList.name), 4)
-                    for issueEntry in entryMatches:
-                        _, _, _, seriesName, seriesStartYear, seriesIssueNum, _ = issueEntry
+                                if numMatches > 0:
+                                    if numMatches > 1:
+                                        printResults("Warning: Multiple db entries found for issue with hrnum='%s' in %s" % (
+                                            listEntryID, readingList.name), 4)
+                                    
+                                    for issueEntry in entryMatches:
+                                        _, _, _, seriesName, seriesStartYear, seriesIssueNum, _ = issueEntry
 
-                    if seriesName is None or seriesStartYear is None:
-                        printResults("Error: Invalid series data found for name='%s' startYear='%s')" % (seriesName,seriesStartYear),4)
-                    else:
-                        curSeries = Series.getSeries(seriesName, seriesStartYear)
-                        curIssue = curSeries.getIssue(seriesIssueNum)
-                        curReadingList.addIssue(curIssue, listEntryNum)
-                    #curIssue = Issue(
-                    #    seriesIssueNum, curSeries, listEntryNum)
-                    #issueList.append(curIssue)
+                                    if seriesName is None or seriesStartYear is None:
+                                        printResults("Error: Invalid series data found for name='%s' startYear='%s')" % (seriesName,seriesStartYear),4)
+                                    else:
+                                        curSeries = Series.getSeries(seriesName, seriesStartYear)
+                                        curIssue = curSeries.getIssue(seriesIssueNum)
+                                        curReadingList.addIssue(curIssue, listEntryNum)
+                                    #curIssue = Issue(
+                                    #    seriesIssueNum, curSeries, listEntryNum)
+                                    #issueList.append(curIssue)
 
-            #curReadingList.processIssueList(issueList)
+                            #curReadingList.processIssueList(issueList)
 
-            onlineLists.append(curReadingList)
+                            onlineLists.append(curReadingList)
+                    except Exception as e:
+                        printResults("Error: Unable to process db file %s : %s" % (file,e),2)
 
     return onlineLists

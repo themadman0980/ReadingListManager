@@ -3,6 +3,7 @@
 from readinglistmanager.utilities import printResults
 import os
 
+
 class Source:
     def __init__(self, name, file, sourceType):
         self._file = file
@@ -71,9 +72,7 @@ class DataSource(Source):
     def __init__(self, name, file):
         super().__init__(name, file, "Data")
         self._tableIssueDetails = 'cv_issues'
-        self._tableSearchIssues = 'cv_searches_issues'
         self._tableVolumeDetails = 'cv_volumes'
-        self._tableSearchVolume = 'cv_searches_volumes'
 
     def tableVolumeDetails():
         doc = "The Volume Details table name"
@@ -101,38 +100,13 @@ class DataSource(Source):
     tableIssueDetails = property(**tableIssueDetails())
 
 class OnlineSource(Source):
-    def __init__(self, name, file, tableDict):
+    def __init__(self, file, name, tableDict):
         super().__init__(name, file, "WEB-DL")
         printResults("Checking DB data in %s" % (file,), 2)
         try:
-            self._tableReadingListTitles = tableDict['ReadingLists']
-            self._tableReadingListDetails = tableDict['ReadingListDetails']
-            self._tableIssueDetails = tableDict['IssueDetails']
+            self.tableReadingListTitles = tableDict['ReadingLists']
+            self.tableReadingListDetails = tableDict['ReadingListDetails']
+            self.tableIssueDetails = tableDict['IssueDetails']
         except Exception as e:
-            print("Caught error in OnlineSource:", e)
             printResults(
                 "Warning : Unable to find DB table details for %s: %s" % (self.name, e), 5)
-
-    def tableReadingListTitles():
-        doc = "The Reading List Title table name."
-
-        def fget(self):
-            return self._tableReadingListTitles
-        return locals()
-    tableReadingListTitles = property(**tableReadingListTitles())
-
-    def tableReadingListDetails():
-        doc = "The Reading List Details table name."
-
-        def fget(self):
-            return self._tableReadingListDetails
-        return locals()
-    tableReadingListDetails = property(**tableReadingListDetails())
-
-    def tableIssueDetails():
-        doc = "The Issue Details table name"
-
-        def fget(self):
-            return self._tableIssueDetails
-        return locals()
-    tableIssueDetails = property(**tableIssueDetails())

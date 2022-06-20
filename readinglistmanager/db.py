@@ -83,12 +83,11 @@ class DataDB(DB):
 
     def __init__(self, source):
         super().__init__(source)
-        self._lastSearchedTimestamp = 0
-        self._cvSession = Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(files.cvCacheFile,60))
+        self.lastSearchedTimestamp = 0
+        self.cvSession = Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(files.cvCacheFile,60))
 
         if not isinstance(source, DataSource):
             printResults("Error: Invalid source type for CV data!")
-
         self.createTables()
         if config.Troubleshooting.update_clean_names:
             self.recreateCleanNames()
@@ -99,17 +98,6 @@ class DataDB(DB):
 #                   - self._lastSearchedTimestamp) / 1000
 #        return max(0, config.CV.api_rate - timeDif)
 
-    def cvSession():
-        doc = "The Issue Details table name"
-
-        def fget(self):
-            return self._cvSession
-
-        def fdel(self):
-            del self._cvSession
-        return locals()
-    cvSession = property(**cvSession())
-
     def findVolumeMatches(self, name):
         results = None
         try:
@@ -118,8 +106,7 @@ class DataDB(DB):
             results = self.cvSession.volume_list(
                 params={"filter": "name:%s" % (name)})
         except Exception as e:
-            printResults(
-                "There was an error processing CV search for %s" % (name), 4)
+            printResults("There was an error processing CV search for %s" % (name), 4)
             printResults(str(e), 4)
 
         return results
@@ -134,25 +121,39 @@ class DataDB(DB):
                 params={"filter": "volume:%s" % (seriesID)})
             DataDB.searchCount += 1
             if len(results) == 0:
-                printResults(
-                    "Warning: No issues found for series [%s]" % (seriesID), 4)
+                printResults("Warning: No issues found for series [%s]" % (seriesID), 4)
         except Exception as e:
-            printResults(
-                "Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
+            printResults("Error: Unable to search for CV issues for [%s]" % (seriesID), 4)
             printResults(str(e), 4)
 
         return results
+    
+    def findVolumeDetails(self,seriesID):
+        results = None
+        try:
+            results = self.cvSession.volume(seriesID)
+            DataDB.searchCount += 1
+            if results is None:
+                printResults("Warning: No volume found for [%s]" % (seriesID), 4)
+        except Exception as e:
+            printResults("Error: Unable to search for CV volume [%s]" % (seriesID), 4)
+            printResults(str(e), 4)
+
+        return results
+
 
     def createTables(self):
         cursor = self.connection.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS cv_volumes
                        (VolumeID INT NOT NULL, Name TEXT, StartYear INT, NumIssues INT, Publisher TEXT, NameClean TEXT, DateAdded DATE, DateLastChecked DATE, PRIMARY KEY (VolumeID))''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS cv_volume_overrides
+                       (VolumeID INT NOT NULL, AltSeriesName TEXT, AltSeriesStartYear INT, PRIMARY KEY (AltSeriesName, AltSeriesStartYear))''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS cv_issues
                        (IssueID INT NOT NULL, VolumeID INT NOT NULL, Name TEXT, CoverDate DATE, IssueNumber TEXT, DateAdded DATE, DateLastChecked DATE, PRIMARY KEY (IssueID))''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS cv_searches_volumes
-                       (Name TEXT, NameClean TEXT, StartYear INT, DateChecked DATE) ''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS cv_searches_issues
-                       (SeriesID int NOT NULL, DateChecked DATE) ''')
+        #cursor.execute('''CREATE TABLE IF NOT EXISTS cv_searches_volumes
+        #               (Name TEXT, NameClean TEXT, StartYear INT, DateChecked DATE) ''')
+        #cursor.execute('''CREATE TABLE IF NOT EXISTS cv_searches_issues
+        #               (SeriesID int NOT NULL, DateChecked DATE) ''')
         self.connection.commit()
         cursor.close()
 
@@ -160,8 +161,7 @@ class DataDB(DB):
         printResults("Cleaning Volume Names", 2)
         cursor = self.connection.cursor()
 
-        seriesListQuery = ''' SELECT * FROM cv_volumes '''
-        seriesList = cursor.execute(seriesListQuery).fetchall()
+        seriesList = cursor.execute('SELECT * FROM cv_volumes').fetchall()
 
         for series in seriesList:
             seriesID = series[0]
@@ -170,11 +170,9 @@ class DataDB(DB):
 
             nameClean = utilities.cleanNameString(seriesName)
 
-            updateCleanNameQuery = ''' UPDATE cv_volumes SET NameClean=\"%s\" WHERE VolumeID=\"%s\" ''' % (
-                nameClean, seriesID)
             printResults("Updating CleanName for %s : %s" %
                          (seriesID, nameClean), 3)
-            cursor.execute(updateCleanNameQuery)
+            cursor.execute('UPDATE cv_volumes SET NameClean=? WHERE VolumeID=?',(nameClean, seriesID))
             self.connection.commit()
 
         cursor.close()
@@ -186,34 +184,33 @@ class DataDB(DB):
                 series.name, series.startYear, series.id), 5)
             dbCursor = self.connection.cursor()
 
-            checkVolumeQuery = ''' SELECT * FROM cv_volumes WHERE VolumeID=%s ''' % (
-                series.id)
-            checkResults = dbCursor.execute(checkVolumeQuery).fetchall()
+            checkResults = dbCursor.execute('SELECT * FROM cv_volumes WHERE VolumeID=?',(series.id,)).fetchall()
 
             if len(checkResults) > 0:
-                # Match already exists!
+                # Match already exists in DB!
                 printResults("Series %s (%s) [%s] already exists in the DB!" % (
                     series.name, series.startYear, series.id))
             else:
                 try:
-                    if series.numIssues or series.publisher:
-                        if series.numIssues and series.publisher:
-                            # Both!
-                            volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded)
-                                                VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
-                        elif series.numIssues:
-                            # NumIssues only
-                            volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,DateAdded)
-                                                VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, dateAdded)
-                        else:
-                            # Publisher only
-                            volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,Publisher,DateAdded)
-                                                VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.publisher, dateAdded)
-                    else:
-                        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
-                                                VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
+                    curSeries = (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
+                    #if series.numIssues or series.publisher:
+                    #    if series.numIssues and series.publisher:
+                    #        # Both!
+                    #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded)
+                    #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, series.publisher, dateAdded)
+                    #    elif series.numIssues:
+                    #        # NumIssues only
+                    #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,DateAdded)
+                    #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.numIssues, dateAdded)
+                    #    else:
+                    #        # Publisher only
+                    #        volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,Publisher,DateAdded)
+                    #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, series.publisher, dateAdded)
+                    #else:
+                    #    volumeQuery = ''' INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,DateAdded)
+                    #                            VALUES (\"%s\",\"%s\",\"%s\",\"%s\",\"%s\")''' % (series.id, series.name, series.nameClean, series.startYear, dateAdded)
 
-                    dbCursor.execute(volumeQuery)
+                    dbCursor.execute('INSERT OR IGNORE INTO cv_volumes (VolumeID,Name,NameClean,StartYear,NumIssues,Publisher,DateAdded) VALUES (?,?,?,?,?,?,?)',curSeries)
                     self.connection.commit()
                     dbCursor.close()
                 except Exception as e:
