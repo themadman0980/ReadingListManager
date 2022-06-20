@@ -3,8 +3,10 @@ readinglistmanager/__pycache__/
 config.ini
 ReadingLists/*
 Results/*
-Output/*
+Output/WEB/*
+Output/CBL/*
 Data/*
+!Output/CBL/Example.cbl
 !Data/cv.db
 !Data/SeriesOverrides.json
 !Data/views.txt
