@@ -272,7 +272,11 @@ class Series:
 
         if lookupMatches is not None and len(lookupMatches) > 0:
             if len(lookupMatches) > 1:
-                ProblemData.addSeries(self,ProblemData.ProblemType.MultipleMatch)
+                extraData = []
+                for match in lookupMatches:
+                    data = {'id':match[0],'publisher':match[4],'numIssues':match[3]}
+                    extraData.append(data)
+                ProblemData.addSeries(self,ProblemData.ProblemType.MultipleMatch,extraData)
                 printResults("Warning: Multiple DB matches found for %s (%s)" % (
                     self.nameClean, self.startYearClean), 4)
             # There was an exact match. Check publisher preferences
@@ -471,6 +475,7 @@ class Series:
                         for match in matches['NameOnly']:
                             matchYearClean = utilities.getCleanYear(match.start_year)
                             matchNameClean = utilities.getDynamicName(match.name)
+                            matchData = {'id':match.id_,'name':match.name,'startYear':match.start_year,'publisher':match.publisher.name,'numIssues':match.issue_count}
                             
                             if self.nameClean == matchNameClean:
                                 if None not in (match.start_year, self.startYearClean):
@@ -478,14 +483,14 @@ class Series:
                                     deviation = min(deviation,newDeviation)    
 
                                     if deviation <= 2:
-                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVSimilarMatch)
+                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVSimilarMatch,matchData)
                             elif self.nameClean in matchNameClean:
                                 if None not in (match.start_year, self.startYearClean):
                                     newDeviation = abs(int(matchYearClean) - int(self.startYearClean))
                                     deviation = min(deviation,newDeviation)
                         
                                     if deviation <= 2:
-                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVIncorrectYear)
+                                        ProblemData.addSeries(self,ProblemData.ProblemType.CVIncorrectYear,matchData)
                         
                         ProblemData.addSeries(self,ProblemData.ProblemType.CVNoMatch)
 

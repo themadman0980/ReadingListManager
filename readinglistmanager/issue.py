@@ -118,7 +118,7 @@ class Issue:
                 Issue.dbNoMatch += 1
                 if config.verbose: printResults("Info: No matches found for %s (%s) #%s [%s]" % (
                     self.series.name, self.series.startYear, self.issueNumber, self.series.id), 4)
-                problemdata.ProblemData.addSeries(self.series,problemdata.ProblemData.ProblemType.IssueNotFound)
+                problemdata.ProblemData.addSeries(self.series,problemdata.ProblemData.ProblemType.IssueNotFound,{'issueNumber':self.issueNumber})
         else:
             pass
             #printResults("Info: Unable to find issue: %s (%s) [%s] #%s" % (self.series.name, self.series.startYear, self.series.id,self.issueNumber), 4)

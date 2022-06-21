@@ -20,8 +20,9 @@ class ProblemData():
     _list = dict((problem,[]) for problem in ProblemType)
     _problemSeries = []
 
-    def __init__(self,type):
+    def __init__(self,type,data=None):
         self.type = type
+        self.data = data
         ProblemData.problemCount += 1
 
     def _addToList(self):
@@ -29,9 +30,9 @@ class ProblemData():
         if hasattr(self,'series'): ProblemData._problemSeries.append(self.series)
 
     @classmethod
-    def addSeries(self,series,problemType):
+    def addSeries(self,series,problemType, extraData=None):
         if series not in ProblemData._problemSeries:
-            ProblemSeries(series,problemType)
+            ProblemSeries(series,problemType,extraData)
             ProblemData._problemSeries.append(series)
 
 
@@ -56,6 +57,12 @@ class ProblemData():
                         string = "Issue : %s = %s (%s) [%s] #%s [%s]" % (entry.type.value,entry.series.name,entry.series.startYear,entry.series.id,entry.issueNumber,entry.id)
                     if isinstance(entry,ProblemSeries):
                         string = "Series : %s = %s (%s) [%s] - '%s (%s)'" % (entry.type.value,entry.name,entry.startYear,entry.id,entry.nameClean,entry.startYearClean)
+                        if entry.data is not None:
+                            if isinstance(entry.data,list):
+                                for item in entry.data:
+                                    string += '\n   ' + str(item)
+                            else:
+                                string += '\n   ' + str(entry.data)
                     # Print entry
                     utilities.writeProblemData(string)
 
@@ -79,8 +86,8 @@ class ProblemIssue(ProblemData):
 
 class ProblemSeries(ProblemData):
 
-    def __init__(self,series,problemType):
-        super().__init__(problemType)
+    def __init__(self,series,problemType,extraData=None):
+        super().__init__(problemType,extraData)
         #self._checkForPartialMatch(series.nameClean,series.cvResultsSeries)
         self.series = series
         self._addToList()
