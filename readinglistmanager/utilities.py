@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import unicodedata  # Needed to strip character accents
-import re, os
+import re, os,string
 from datetime import datetime
 from readinglistmanager import filemanager
 
+resultsFile = filemanager.resultsFile
+problemsFile = filemanager.problemsFile
 dateFormat = '%Y-%m-%d'
 dynamicNameTemplate = '[^a-zA-Z0-9]'
 stop_words = ['the', 'a', 'and']
@@ -18,20 +20,26 @@ def getCurrentTimeStamp():
 def getTodaysDate():
     return datetime.today().strftime(dateFormat)
 
-def parseDate(dateString):
-    if dateString is not None:
+def getStringFromDate(dateObject):
+    if dateObject is not None:
         try:
-            return datetime.strftime(dateString, dateFormat)
-        except:
+            return datetime.strftime(dateObject, dateFormat)
+        except Exception as e:
             return
 
 def getDateFromString(dateString):
     if dateString is not None:
         try:
             return datetime.strptime(dateString, dateFormat)
-        except:
+        except Exception as e:
             return
  
+def escapeString(string):
+    """HTML-escape the text in `t`."""
+    return (string
+        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("'", "&#39;").replace('"', "&quot;")
+        )
 
 def stripAccents(s):
     # Converts accented letters to their basic english counterpart
@@ -60,6 +68,12 @@ def fixEncoding(string):
     )
 
     return utf8_string
+
+def isValidID(ID):
+    if ID is not None:
+        isDigit = str(ID).isdigit()
+        return isDigit
+    return False
 
 #def fixEncoding(string): 
 #    wrong = 'windows-1252'
@@ -92,9 +106,40 @@ def getCleanYear(string):
     else:
         return cleanString
 
+def padNumber(number):
+    if number < 10:
+        return '000' + str(number)
+    elif number < 100:
+        return '00' + str(number)
+    elif number < 1000:
+        return '0' + str(number)
+    else:
+        return number
 
-def printResults(string, indentation, lineBreak=False, replace=False):
-    with open(filemanager.files.resultsFile, mode='a') as file:
+def os_path_separators():
+    seps = []
+    for sep in os.path.sep, os.path.altsep:
+        if sep:
+            seps.append(sep)
+    return seps
+
+def sanitisePathString(fileNameString):
+    # Replace path separators with underscores
+    for sep in os_path_separators():
+        valid_filename = fileNameString.replace(sep, '_')
+    # Ensure only valid characters
+    valid_chars = "-_.() {0}{1}".format(string.ascii_letters, string.digits)
+    valid_filename = "".join(ch for ch in valid_filename if ch in valid_chars)
+    # Ensure at least one letter or number to ignore names such as '..'
+    valid_chars = "{0}{1}".format(string.ascii_letters, string.digits)
+    test_filename = "".join(ch for ch in fileNameString if ch in valid_chars)
+    if len(test_filename) == 0:
+        # Replace empty file name or file path part with the following
+        valid_filename = "(Empty Name)"
+    return valid_filename
+
+def printResults(string, indentation=0, lineBreak=False, replace=False):
+    with open(resultsFile, mode='a') as file:
         if not replace:
             if lineBreak:
                 print("")
@@ -112,6 +157,6 @@ def printResults(string, indentation, lineBreak=False, replace=False):
             print("%s%s" % ('\t'*indentation, string))
 
 def writeProblemData(string):
-    with open(filemanager.files.problemsFile, mode='a') as file:
+    with open(problemsFile, mode='a') as file:
         file.write("\n%s" % (string))
         file.flush()

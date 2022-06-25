@@ -1,13 +1,14 @@
-readinglistmanager/__pycache__/
 .vscode/
 config.ini
+readinglistmanager-OLD
+__pycache__
 ReadingLists/*
 Results/*
 Output/WEB/*
 Output/CBL/*
 Data/*
+class.puml
 !Output/CBL/Example.cbl
-!Data/cv.db
 !Data/SeriesOverrides.json
 !Data/views.txt
 !ReadingLists/Example.cbl

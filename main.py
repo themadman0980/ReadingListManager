@@ -1,34 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from readinglistmanager.errorhandling import problemdata
 from readinglistmanager.utilities import printResults
-from readinglistmanager import importer,datasource,db,config,problemdata
-from readinglistmanager.filemanager import files
-from readinglistmanager.series import Series
-from readinglistmanager.issue import Issue
-from readinglistmanager.readinglist import ReadingList
-
+from readinglistmanager import config, filemanager
+#from readinglistmanager.model.series import Series
+#from readinglistmanager.model.issue import Issue
+from readinglistmanager.datamanager import dataManager, importer, datasource
+from readinglistmanager.model.readinglist import ReadingList
 
 def main():
-    printResults("Initialising...", 1, True)
-
-    data = datasource.DataSource("Data", files.dataFile)
-    dataDB = db.DataDB(data)
-    Series.database = dataDB
-
+    
     printResults("Reading data from sources...", 1, True)
     readingLists = []
 
     if config.Troubleshooting.process_cbl:
-        readingLists = importer.parseCBLfiles(dataDB)
+        readingLists = importer.parseCBLfiles()
 
     if config.Troubleshooting.process_web_dl:
-        readingLists += importer.getOnlineLists(dataDB)
+        readingLists += importer.getOnlineLists()
 
     numLists = len(readingLists)
     sources = set()
 
     for list in readingLists:
-        sources.add(list.source.name)
+        if isinstance(list, ReadingList) and isinstance(list.source,datasource.Source):
+            sources.add(list.source.name)
 
     numListSources = len(sources)
 
@@ -37,16 +33,19 @@ def main():
 
     printResults("Validating data...", 1, True)
 
-    Series.validateAll()
+    dataManager.validateSeries()
+    dataManager.processProblemData()
 
     printResults("Summarising results...", 1, True)
 
-    ReadingList.printSummaryResults(readingLists)
-    Series.printSummaryResults()
-    Issue.printSummaryResults()
+    dataManager.printSummaryResults(readingLists)
     problemdata.ProblemData.printSummaryResults()
-    problemdata.ProblemData.exportToFile()
+    #ReadingList.printSummaryResults(readingLists)
+    #problemdata.ProblemData.printSummaryResults()
+    #problemdata.ProblemData.exportToFile()
+    printResults("Generating CBL files...", 1, True)
     ReadingList.generateCBLs(readingLists)
+    problemdata.ProblemData.exportToFile()
 
 if __name__ == "__main__":
     main()

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+import os, json
 from datetime import datetime
 
-timeString = datetime.today().strftime("%y%m%d%H%M%S")
+_timeString = datetime.today().strftime("%y%m%d%H%M%S")
 
 rootDirectory = os.getcwd()
 #rootDirectory = os.path.dirname(rootDirectory)
@@ -15,111 +15,32 @@ outputDirectory = os.path.join(rootDirectory, "Output")
 
 dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
+overridesFile = os.path.join(dataDirectory,'SeriesOverrides.json')
 configFile = os.path.join(rootDirectory, 'config.ini')
-resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (timeString))
-problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (timeString))
+resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (_timeString))
+problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (_timeString))
 
 def checkDirectories():
 
-    directories = {dataDirectory,readingListDirectory,resultsDirectory,outputDirectory}
+    directories = [dataDirectory,readingListDirectory,resultsDirectory,outputDirectory]
 
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-class FileManager():
-    def __init__(self):
-        self._cvCacheFile = cvCacheFile
-        self._dataDirectory = dataDirectory
-        self._rootDirectory = rootDirectory
-        self._readingListDirectory = readingListDirectory
-        self._resultsDirectory = resultsDirectory
-        self._outputDirectory = outputDirectory
-        self._resultsFile = resultsFile
-        self._problemsFile = problemsFile
-        self._dataFile = dataFile
-        checkDirectories()
+checkDirectories()
 
-    def cvCacheFile():
-        doc = "The cvCache property."
+def getJSONData(jsonFile : str) -> dict :
+    jsonData = None
 
-        def fget(self):
-            return self._cvCacheFile
+    if fileExists(jsonFile):
+        altSeriesDataFile = open(jsonFile,'r')
+        jsonData = json.load(altSeriesDataFile)
+        
+    return jsonData
 
-        return locals()
-    cvCacheFile = property(**cvCacheFile())
-
-    def dataFile():
-        doc = "The main database file"
-
-        def fget(self):
-            return self._dataFile
-
-        return locals()
-    dataFile = property(**dataFile())
-
-    def dataDirectory():
-        doc = "The dataDirectory property."
-
-        def fget(self):
-            return self._dataDirectory
-
-        return locals()
-    dataDirectory = property(**dataDirectory())
-
-    def rootDirectory():
-        doc = "The rootDirectory property."
-
-        def fget(self):
-            return self._rootDirectory
-
-        return locals()
-    rootDirectory = property(**rootDirectory())
-
-    def outputDirectory():
-        doc = "The outputDirectory property."
-
-        def fget(self):
-            return self._outputDirectory
-
-        return locals()
-    outputDirectory = property(**outputDirectory())
-
-    def readingListDirectory():
-        doc = "The readingListDirectory property."
-
-        def fget(self):
-            return self._readingListDirectory
-
-        return locals()
-    readingListDirectory = property(**readingListDirectory())
-
-    def resultsDirectory():
-        doc = "The resultsDirectory property."
-
-        def fget(self):
-            return self._resultsDirectory
-
-        return locals()
-    resultsDirectory = property(**resultsDirectory())
+def fileExists(file : str) -> bool:
+    if file is not None and os.path.exists(file):
+        return True
     
-    def resultsFile():
-        doc = "The output file for console data"
-
-        def fget(self):
-            return self._resultsFile
-
-        return locals()
-    resultsFile = property(**resultsFile())
-
-    def problemsFile():
-        doc = "The output file for problem data"
-
-        def fget(self):
-            return self._problemsFile
-
-        return locals()
-    problemsFile = property(**problemsFile())
-
-
-files = FileManager()
+    return False
