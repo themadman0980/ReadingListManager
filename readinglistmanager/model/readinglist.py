@@ -32,10 +32,10 @@ class ReadingList:
 
     def writeToCBL(self):
         #sourcePath = self.source.file
+        destFolder = None
         if isinstance(self.source, datasource.Source):
             sourceFolder = os.path.dirname(self.source.file)
             # Set output to subdirectory of output folder
-            destFolder = ""
             #Set top level of cbl output destination
             if self.source.type == datasource.ListSourceType.CBL:
                 destFolderTop = os.path.join(filemanager.outputDirectory,"CBL")
@@ -44,7 +44,7 @@ class ReadingList:
                 destFolder = os.path.join(filemanager.outputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
 
             # Set full path to CBL, keeping relative location
-        else:
+        if destFolder is None:
             # Set output file to output folder
             destFolder = filemanager.outputDirectory
 
