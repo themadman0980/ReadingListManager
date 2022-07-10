@@ -39,11 +39,11 @@ class ReadingList:
             #Set top level of cbl output destination
             if self.source.type == datasource.ListSourceType.CBL:
                 destFolderTop = os.path.join(filemanager.outputDirectory,"CBL")
+                destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolderTop)
             if self.source.type == datasource.ListSourceType.Website:
-                destFolderTop = os.path.join(filemanager.outputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
+                destFolder = os.path.join(filemanager.outputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
 
             # Set full path to CBL, keeping relative location
-            destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolderTop)
         else:
             # Set output file to output folder
             destFolder = filemanager.outputDirectory
@@ -63,13 +63,13 @@ class ReadingList:
             lines.append("<Books>")
 
             #For each issue in arc
-            for key,issue in self.issueList.items():
+            for key,issue in sorted(self.issueList.items()):
                 if isinstance(issue,Issue):
                     # Check if issue cover date exists
                     if issue.coverDate is not None and isinstance(issue.coverDate,datetime.datetime):
                         issueYear = issue.coverDate.year
                     else:
-                        issueYear = None
+                        issueYear = issue.year
 
                     seriesName = utilities.escapeString(issue.series.name)
                     issueNum = utilities.escapeString(issue.issueNumber)
