@@ -38,5 +38,10 @@
         "volumeComicvineID": "86723",
         "altSeriesDynamicName": "weirdworld",
         "altSeriesStartYear": "2016"
+    },    
+    {
+        "volumeComicvineID": "43017",
+        "altSeriesDynamicName": "I, Vampire",
+        "altSeriesStartYear": "2011"
     }
 ]

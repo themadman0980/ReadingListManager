@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unicodedata  # Needed to strip character accents
-import re, os,string
+import re, os, string
 from datetime import datetime
 from readinglistmanager import filemanager
 
@@ -36,7 +36,7 @@ def getDateFromString(dateString):
  
 def escapeString(string):
     """HTML-escape the text in `t`."""
-    return (string
+    return (str(string)
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         .replace("'", "&#39;").replace('"', "&quot;")
         )
@@ -160,3 +160,48 @@ def writeProblemData(string):
     with open(problemsFile, mode='a') as file:
         file.write("\n%s" % (string))
         file.flush()
+
+def _cleanReadingListName(listName : str) -> dict:
+    patterns = [
+        r'(?P<partNumber>\d+)? *(?P<listName>.*?[^()]) *\(?(?P<listYears>\d+(?:-\d+)?)\)?$',
+        r'(?P<publisher>Marvel|DC) Events?: *(?P<listName>.*)$'
+    ]
+
+    result = {'listName':listName}
+
+    if listName is not None and isinstance(listName, str):
+        # Regex to strip annual, volume, year etc. from name
+        for pattern in patterns:
+            match = re.search(pattern,listName,re.IGNORECASE)
+            if match:
+                # Regex match found
+                result = match.groupdict()
+                
+                break
+    
+    return result
+
+def _cleanSeriesName(seriesName : str):
+    volPattern = r'(?P<seriesName>.*?) *(Vol(ume)?\.?) *\(?(?P<volumeNum>\d+)?\)?$'
+    patterns = {
+        'volume': volPattern + '$',
+        'volumeAnnual': volPattern + r' *(?P<annualTag>Annual)$',
+        'year': r'(?P<seriesName>.*?) *\(?(?P<seriesYear>19[2-9]\d|20[0-4]\d|\'\d{2})\)?$'
+    }
+    
+    newSeriesName = seriesName
+    
+    if seriesName is not None and isinstance(seriesName, str):
+        # Regex to strip annual, volume, year etc. from name
+        for type,pattern in patterns.items():
+            match = re.search(pattern,seriesName,re.IGNORECASE)
+            if match:
+                matchDict = match.groupdict()
+                # Regex match found
+                newSeriesName = matchDict['seriesName']
+                if 'annualTag' in matchDict:
+                    newSeriesName += matchDict['annualTag']
+                
+                break
+            
+    return newSeriesName

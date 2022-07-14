@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os,json
-from re import L
 from readinglistmanager import utilities
 from readinglistmanager.utilities import printResults
 from readinglistmanager.model.issue import Issue
@@ -45,8 +43,8 @@ class Series:
     def __init__(self, seriesName, seriesStartYear):
         self._name = None
         self.dynamicName = None
-        self.name = seriesName
         self.startYear = Series.getCleanStartYear(seriesStartYear)
+        self.name = seriesName
         self.publisher = None
         self.id = None
         self.numIssues = None
@@ -55,7 +53,6 @@ class Series:
         self.problems = dict()
         self._issueNums = set()
         self.dataSourceType = ComicInformationSource.SourceType.Manual
-        self.key = Series.getSeriesKey(self.name, self.startYear)
         self.checked = dict()
         self.detailsFound = False
 
@@ -77,10 +74,11 @@ class Series:
     def addIssue(self, issueObject : Issue) -> None:
         if isinstance(issueObject, Issue):
             issueObject.series = self
-            self.issueList[issueObject.issueNumber] = issueObject
+            self.issueList[str(issueObject.issueNumber)] = issueObject
 
     def getIssue(self, issueNum : str) -> Issue:
         issue = None
+        issueNum = str(issueNum)
 
         # Get existing issue from series issue list
         if issueNum in self.issueList:
@@ -152,11 +150,18 @@ class Series:
         def fset(self, value):
             self._name = utilities.fixEncoding(value)
             self.dynamicName = Series.getCleanName(value)
+            self.key = Series.getSeriesKey(self._name, self.startYear)
 
         def fdel(self):
             del self._name
         return locals()
     name = property(**name())
+
+    @classmethod
+    def fromDict(self, match : dict):
+        newSeries = Series(match['name'],match['startYear'])
+        newSeries.updateDetailsFromDict(match)
+        return newSeries
 
     def getDict(self):
         data = {

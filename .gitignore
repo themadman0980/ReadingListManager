@@ -4,13 +4,11 @@ readinglistmanager-OLD
 __pycache__
 ReadingLists/*
 Results/*
-Output/WEB/*
-Output/CBL/*
+Output/*
 Data/*
 class.puml
-!Output/CBL/Example.cbl
+!Output/CBL/CBL/Example.cbl
 !Data/SeriesOverrides.json
 !Data/views.txt
 !ReadingLists/Example.cbl
-!Data/data.db
 *.DS_Store

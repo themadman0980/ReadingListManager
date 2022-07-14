@@ -12,6 +12,8 @@ dataDirectory = os.path.join(rootDirectory, "Data")
 readingListDirectory = os.path.join(rootDirectory, "ReadingLists")
 resultsDirectory = os.path.join(rootDirectory, "Results")
 outputDirectory = os.path.join(rootDirectory, "Output")
+jsonOutputDirectory = os.path.join(outputDirectory, "JSON")
+cblOutputDirectory = os.path.join(outputDirectory, "CBL")
 
 dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
@@ -22,7 +24,14 @@ problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (_timeString))
 
 def checkDirectories():
 
-    directories = [dataDirectory,readingListDirectory,resultsDirectory,outputDirectory]
+    directories = [
+        dataDirectory,
+        readingListDirectory,
+        resultsDirectory,
+        outputDirectory,
+        jsonOutputDirectory,
+        cblOutputDirectory
+        ]
 
     for directory in directories:
         if not os.path.exists(directory):

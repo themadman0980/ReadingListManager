@@ -6,10 +6,10 @@ from enum import Enum
 
 class Issue:
 
-    def __init__(self, series, issueNumber, dataSourceType):
+    def __init__(self, series, issueNumber : str, dataSourceType):
         if issueNumber is None:
             printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
-        self.issueNumber = issueNumber
+        self.issueNumber = str(issueNumber)
         self.series = series
         self.id = None
         self.year = None
@@ -18,9 +18,7 @@ class Issue:
         self.description = None
         self.summary = None
         self.issueType = None
-        self.dataSourceType = dataSourceType
-        self.checkedDB = False
-        self.checkedType = False
+        self.sourceType = dataSourceType
         self.detailsFound = False
 
     #@classmethod
@@ -43,19 +41,17 @@ class Issue:
         return False
 
     def __hash__(self):
-        return hash((self.series.nameClean, self.series.startYearClean, self.issueNumber, self.id))
-
-    def validate(self):
-        if not self.hasValidID() and not self.checkedDB:
-            # Check DB for issue ID match
-            #self.findDBIssueID(database)
-            pass
+        return hash((self.series.dynamicName, self.series.startYear, self.issueNumber, self.id))
 
     # Check that issueID and seriesID exist
     def hasValidID(self):
-        if self.id is not None and str(self.id).isdigit():
-            return True
-        return False
+        return utilities.isValidID(self.id)
+
+    @classmethod
+    def fromDict(self, match : dict):
+        newIssue = Issue(None,match['issueNum'],match['dataSource'])
+        newIssue.updateDetailsFromDict(match)
+        return newIssue
 
     def updateDetailsFromDict(self, match : dict) -> None:
         # Populate attributes from _issueDetailsTemplate dict structure
@@ -66,10 +62,14 @@ class Issue:
             self.description = match['description']
             self.summary = match['summary']
             self.issueType = match['issueType']
-            self.dataSourceType = match['dataSourceType']
+            self.sourceType = match['dataSource']
             self.detailsFound = True
         except:
-            printResults("Error: Unable to update issue \'%s (%s) #%s\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, match),4)
+            if self.series is not None: 
+                printResults("Error: Unable to update issue \'%s (%s) #%s [%s]\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, self.id, match),4)
+            else:
+                printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.id, match),4)
+
 
     def coverDateString():
         doc = "The issue's coverdate in String format"
@@ -80,7 +80,7 @@ class Issue:
         return locals()
     coverDateString = property(**coverDateString())
 
-    def getDict(self) -> dict:
+    def getDBDict(self) -> dict:
         data = {
             'issueID': self.id, 
             'seriesID': self.series.id, 
@@ -88,6 +88,19 @@ class Issue:
             'coverDate': self.coverDateString, 
             'issueNum': self.issueNumber, 
             'description': self.description, 
-            'summary': self.summary, 
-            'dateAdded': self.dateAdded}
+            'summary': self.summary}
+        return data
+    
+    def getJSONDict(self) -> dict:
+        data = {
+            'SeriesName': self.series.name,
+            'SeriesStartYear': self.series.startYear,
+            'IssueNum': self.issueNumber,
+            'CoverDate': self.coverDateString,
+            'Database': {
+                'Name':'Comicvine',
+                'SeriesID': self.series.id, 
+                'IssueID': self.id
+                }
+            }
         return data

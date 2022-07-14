@@ -9,8 +9,9 @@ class DataSourceType(Enum):
     pass
 
 class ListSourceType(DataSourceType):
-    Website = "Website DB"
-    CBL = "CBL File"
+    Website = "WEB"
+    CBL = "CBL"
+    CV = "CV"
 
 class Source:
     def __init__(self, name : str, file : str, sourceType : DataSourceType = None, tableDict : dict = None):
@@ -18,12 +19,12 @@ class Source:
         self.name = name
         self.type = sourceType
         if self.type == ListSourceType.Website:
-            try:
-                self.tableReadingListTitles = tableDict['ReadingLists']
-                self.tableReadingListDetails = tableDict['ReadingListDetails']
-                self.tableIssueDetails = tableDict['IssueDetails']
-            except Exception as e:
-                printResults("Warning : Unable to find DB table details for %s: %s" % (self.name, e), 5)
+            #try:
+            self.tableReadingListTitles = tableDict['ReadingLists']
+            self.tableReadingListDetails = tableDict['ReadingListDetails']
+            self.tableIssueDetails = tableDict['IssueDetails']
+            #except Exception as e:
+            #    printResults("Warning : Unable to find DB table details for %s: %s" % (self.name, e), 5)
 
     def isValidFile(self):
         if self.file is not None and os.path.exists(self.file):
@@ -41,12 +42,18 @@ class ComicInformationSource():
 
     # Responsible for looking up data from source and returning a list[dict] object of the relevant type (Series / Issue)
 
-    _issueDetailsTemplate = {'issueID' : None, 'seriesID' : None, 'name' : None, 'coverDate' : None, 'issueNum': None, 'issueType' : None, 'dataSourceType' : None, 'description' : None, 'summary' : None, 'dateAdded' : None}
-    _seriesDetailsTemplate = {'seriesID': None, 'name' : None, 'startYear' : None, 'publisher' : None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None}
+    _issueDetailsTemplate = {'issueID' : None, 'seriesID' : None, 'name' : None, 'coverDate' : None, 'issueNum': None, 'issueType' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
+    _seriesDetailsTemplate = {'seriesID': None, 'name' : None, 'startYear' : None, 'publisher' : None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
+    _listDetailsTemplate = {'listID': None, 'name' : None, 'publisher' : None, 'issues': None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
 
     class IssueType(Enum):
         Issue = "Issue"
         Trade = "Trade"
+
+    class ReadingListType(Enum):
+        Event = "Event"
+        Character = "Character"
+        Team = "Team"
 
     @property
     @abstractmethod
@@ -78,6 +85,8 @@ class ComicInformationSource():
         SeriesList = "VolumeList"
         Issue = 'Issue'
         IssueList = 'IssueList'
+        ReadingList = 'Reading List'
+        ReadingLists = 'Reading Lists'
 
     class SearchStatusType(Enum):
         SearchCount = 'Search Count'
@@ -121,9 +130,21 @@ class ComicInformationSource():
         pass
 
     @abstractmethod
+    def getReadingListsFromName(self, name : str) -> list[dict]:
+        pass
+
+    @abstractmethod
+    def getReadingListFromID(self, listID : str) -> dict[dict]:
+        pass
+
+    @abstractmethod
     def convertIssueResultsToDict(self, searchResults : list, resultsType : ResultType) -> list[dict]:
         pass
 
     @abstractmethod
-    def convertSeriesResultsToDict(self, searchResults : list) -> list[dict]:
+    def convertSeriesResultsToDict(self, searchResults : list, resultsType : ResultType) -> list[dict]:
+        pass
+
+    @abstractmethod
+    def convertReadingListResultsToDict(self, searchResults : list, resultsType : ResultType) -> list[dict]:
         pass

@@ -3,16 +3,15 @@
 
 ### Manages datasources, filters list[dict] lookup results into single dict and generates/manages Series objects
 
-from numpy import DataSource
 from readinglistmanager import filemanager,utilities,config
-from readinglistmanager.errorhandling import problemdata
 from readinglistmanager.utilities import printResults
 from readinglistmanager.errorhandling.problemdata import ProblemData
-from readinglistmanager.datamanager import cvManager,dbManager,datasource
+from readinglistmanager.datamanager import cvManager,dbManager,datasource, save
 from readinglistmanager.datamanager.datasource import ComicInformationSource
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.issue import Issue
+import os
 
 dataDB = dbManager.DataDB.get()
 cv = cvManager.CV.get()
@@ -21,6 +20,7 @@ cv = cvManager.CV.get()
 dataSources = [dataDB, cv]
 
 _series = {}
+_readingLists = {}
 _seriesOverrideList = None
 counters = {'matches' : {'override' : 0, 'cv' : 0, 'db' : 0}, 'noMatches':{'override' : 0, 'cv' : 0, 'db' : 0}, 'matchType' : {'one' : 0, 'multiple' : 0, 'blacklist' : 0}}
 overrideMatchCounter = 0
@@ -40,28 +40,52 @@ def _getSeriesOverrideDetails() -> dict:
 
 _seriesOverrideList = _getSeriesOverrideDetails()
 
-def getSeries(name : str, startYear : int, seriesID : str = None) -> Series:
-    # Check if series exists in dict
-    if seriesID is not None and id in _series:
-        return _series[id]
-    else:
-        dynamicName = utilities.getDynamicName(name)
-        startYear = utilities.getCleanYear(startYear)
+#def getSeries(name : str, startYear : int, seriesID : str = None) -> Series:
+#    # Check if series exists in dict
+#    if seriesID is not None and id in _series:
+#        return _series[id]
+#    else:
+#        dynamicName = utilities.getDynamicName(name)
+#        startYear = utilities.getCleanYear(startYear)
+#
+#    if isinstance(series, Series):
+#        # Check result is valid
+#        if series.dynamicName != dynamicName or series.startYear != startYear:
+#            printResults("Warning : Series ID match \"%s (%s) [%s]\" does not have exact match with ReadingList entry details \'%s (%s)\'" % (
+#                series.id, series.name, series.startYear, name, startYear), 4)
+#    else:
+#        series = getSeriesFromDetails(name, startYear)
 
-    if isinstance(series, Series):
-        # Check result is valid
-        if series.nameClean != dynamicName or series.startYear != startYear:
-            printResults("Warning : Series ID match \"%s (%s) [%s]\" does not have exact match with ReadingList entry details \'%s (%s)\'" % (
-                series.id, series.name, series.startYear, name, startYear), 4)
-    else:
-        series = getSeriesFromDetails(name, startYear)
-
-def getSeriesFromID(id : str) -> Series:
+def getSeriesFromSeriesID(seriesID : str) -> Series:
     # Check if series exists in dict
-    if id in _series:
-        return _series[id]
+    if seriesID in _series:
+        return _series[seriesID]
+    else:
+        for source in dataSources:
+            if isinstance(source, ComicInformationSource):
+                seriesData = source.getSeriesFromSeriesID(seriesID)
+                if seriesData is not None and isinstance(seriesData, list): 
+                    seriesData = seriesData[0]
+                    series = Series.fromDict(seriesData)
+
+                    if isinstance(series, Series): 
+                        return series
 
     return None
+
+def getSeriesFromIssueID(issueID : str) -> Series:
+    
+    series = None
+
+    for source in dataSources:
+        if isinstance(source, ComicInformationSource):
+            issueDetails = source.getIssueFromIssueID(issueID)
+            if issueDetails is not None and isinstance(issueDetails, dict):
+                seriesID = issueDetails['seriesID']
+                if utilities.isValidID(seriesID):
+                    series = getSeriesFromSeriesID(seriesID)
+
+    return series
 
 def getSeriesFromDetails(name : str, startYear : str) -> Series:
     series = None 
@@ -76,7 +100,7 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
             global overrideMatchCounter; overrideMatchCounter += 1
             try:
                 seriesID = _seriesOverrideList[seriesKey]['volumeComicvineID']
-                series = getSeriesFromID(seriesID)
+                series = getSeriesFromSeriesID(seriesID)
             except Exception as e:
                 printResults("Error : Unable to process series override for %s (%s) : %s" % (name, startYear, str(e)), 4)
             
@@ -87,50 +111,105 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
 
     return series
 
-def validateSeries():
-    # Identify series' with incomplete details + collect all issue details based on series ID
-    seriesSet = set()
-    checkCVSeriesSet = set()
+def generateCBLs():
+    readingLists = list(set(_readingLists.values()))
+    ReadingList.generateCBLs(readingLists) 
 
-    # Check _series list for incomplete series and add to set
-    for key, series in _series.items():
-        if isinstance(series, Series):
-            seriesSet.add(series)
+
+def validateReadingLists(readingLists : list[ReadingList]) -> None:
+    dataSourceType = ComicInformationSource.SourceType.Comicvine
+
+    if isinstance(readingLists, list):
+        for readingList in readingLists:
+            if isinstance(readingList, ReadingList):
+                readingList.setPublisherFromIssueDetails()
+
+    numLists = len(readingLists)
+    i = 0
+    printResults("Checking %s reading lists" % (numLists), 2)
+
+    readingListNames = set(readingList.name for readingList in readingLists)
+    outputFile = os.path.join(filemanager.outputDirectory,'cvListLookup.txt')
+    save.saveListData(outputFile, readingListNames)
+
+    for readingList in readingLists:
+        i += 1
+        if isinstance(readingList, ReadingList):
+            _updateReadingListFromDataSources(readingList,dataSourceType)
+            printResults("%s / %s reading lists checked" % (i,numLists), 3, False, True)
+
+
+def validateSeries() -> None:
+    # Lookup series' details + collect all issue details based on series ID
+    seriesSet = set(_series.values())
+    checkCVSeriesSet = set()
+    numSeries = len(seriesSet)
 
     # Check DB for all series 
+    printResults("Checking DB for %s series" % (numSeries), 3)
+    
     sourceType = ComicInformationSource.SourceType.Database
+    i = 0
     for series in seriesSet:
+        i += 1
         if isinstance(series, Series):
             if not series.checked[sourceType]:
+                printResults("%s / %s series checked" % (i,numSeries),4,False,True)
                 _updateSeriesFromDataSources(series,sourceType)
 
             if not series.hasCompleteSeriesDetails():
                 checkCVSeriesSet.add(series)
-
     
-    numSeries = len(seriesSet)
     numSeriesLookupCV = len(checkCVSeriesSet)
     numSeriesFoundDB = numSeries - numSeriesLookupCV
-    i = 0
 
     printResults("Validation : DB matches = %s / %s" % (numSeriesFoundDB,numSeries),3)
     printResults("Validation : CV Searches Required = %s" % (numSeriesLookupCV),3)
 
+
     # Iterate through set of incomplete series and check CV for each
     sourceType = ComicInformationSource.SourceType.Comicvine
+    unmatchedCVSet = set()
+    i = 0
     for series in checkCVSeriesSet:
         if isinstance(series, Series) and not series.checked[sourceType]:
             i += 1
             printResults("[%s / %s] : Checking CV for %s (%s) [%s]" % (i, numSeriesLookupCV, series.name, series.startYear, series.id), 4, False, True)
             _updateSeriesFromDataSources(series,sourceType)
-            
+            if not series.hasValidID(): 
+                unmatchedCVSet.add(series)
+    
+    # Reprocess all series names for unmatched series
+
+    i = 0
+    counter = {'processed':0,'cleaned':0, 'matches': 0}
+    for series in unmatchedCVSet:
+        if isinstance(series, Series):
+            counter['processed'] += 1
+            i += 1
+            cleanedSeriesName = utilities._cleanSeriesName(series.name)
+            if cleanedSeriesName != series.name:
+                counter['cleaned'] += 1
+                series.addProblem(ProblemData.ProblemType.NameCleaned,"Original: \'%s\', Cleaned: \'%s\'" % (series.name, cleanedSeriesName))
+                series.name = cleanedSeriesName
+                _updateSeriesFromDataSources(series,sourceType)
+                _addSeriesToList(series)
+
+                if series.hasValidID():
+                    counter['matches'] += 1
+
+    printResults("%s / %s series names cleaned, with %s new matches found" % (counter['cleaned'],counter['processed'],counter['matches']), 3)
+    # Save unmatched series to file
+
+    cvSeriesNames = set(series.name for series in checkCVSeriesSet if isinstance(series, Series))
+    outputFile = os.path.join(filemanager.outputDirectory,'cvSeriesLookup.txt')
+    save.saveListData(outputFile, cvSeriesNames)
 
 def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dict]]:
     preferredType = ComicInformationSource.ResultFilterType.Preferred 
     allowedType = ComicInformationSource.ResultFilterType.Allowed 
     blacklistType = ComicInformationSource.ResultFilterType.Blacklisted 
     resultsFiltered = {preferredType:[], allowedType:[], blacklistType:[]}
-    problemTypes = list()
     nameOnlyMatches = list()
 
     # Check for exact name & year matches & categorise them
@@ -188,6 +267,111 @@ def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dic
 
     return resultsFiltered
 
+
+def _updateReadingListFromDataSources(readingList : ReadingList, checkDataSource : ComicInformationSource.SourceType = None) -> None:
+    match = None
+
+    if not isinstance(readingList, ReadingList):
+        return
+
+    _addReadingList(readingList)
+
+    for dataSource in dataSources:
+        if isinstance(dataSource, ComicInformationSource):
+            if checkDataSource is not None and dataSource.type != checkDataSource:
+                # Skip unwanted datasource if specific dataSource is specified in request
+                continue
+
+            # Check dataSource for match
+            listResults = dataSource.getReadingListsFromName(readingList.name)
+
+            readingList.checked[dataSource.type] = True
+            
+            if listResults is not None and len(listResults) > 0:
+                # Results found - get exact match
+                match = _getFinalListMatchFromResults(listResults,readingList)
+            
+            if match is not None:
+                #try:
+                # TODO : Add story arcs to data.db and account for matches in issue processing
+                if match['issues'] is not None and isinstance(match['issues'], list):
+                    issueList = dict()
+                    for issue in match['issues']:
+                        issueNum = match['issues'].index(issue) + 1
+                        if issue is not None:
+                            issueID = issue.id_
+                            if issueID is not None and utilities.isValidID(issueID):
+                                curIssue = getIssueFromIssueID(issueID)
+                                #for dataSource in dataSources:
+                                #    if isinstance(dataSource, ComicInformationSource):
+                                #        curIssue = dataSource.getIssueFromIssueID(issueID)
+                                if isinstance(curIssue,Issue): 
+                                    issueList[issueNum] = curIssue
+                                    continue
+                match['issues'] = issueList
+                newReadingList = ReadingList.fromDict(match, datasource.ListSourceType.CV)
+                _addReadingList(newReadingList)
+                readingList.id = match['listID']
+                return
+    
+def _getFinalListMatchFromResults(results : list[dict], readingList : ReadingList) -> dict:
+    # Takes list[dict] and filters it to return a single dict object
+    exactMatches = list()
+    finalMatch = None
+    publisherMatches = list()
+
+    if None not in (results, readingList) and isinstance(results, list) and isinstance(readingList, ReadingList):
+        
+        # Check name matches
+        
+        for result in results:
+            resultDynamicName = utilities.getDynamicName(result['name'])
+            if resultDynamicName == readingList.dynamicName:
+                exactMatches.append(result)
+
+        # Check publisher matches
+        
+        for match in exactMatches:
+            if match['publisher'] == readingList.publisher:
+                publisherMatches.append(match)
+
+        # Process publisher matches
+        
+        if len(publisherMatches) == 1:
+            finalMatch = publisherMatches[0]
+        elif len(publisherMatches) > 1:
+            finalMatch = publisherMatches[0]
+            readingList.addProblem(ProblemData.ProblemType.MultipleMatch, publisherMatches)
+            printResults("ReadingList Error : Multiple matches found for %s" % (readingList.name), 4)
+
+        # Identify problems
+
+        if finalMatch is None:
+            if len(results) > 0:
+                readingList.addProblem(ProblemData.ProblemType.CVNoMatch, results)
+            else:
+                readingList.addProblem(ProblemData.ProblemType.CVNoResults)
+        else:
+            finalMatch = cv.getReadingListFromID(finalMatch['listID'])
+            finalMatch = finalMatch[0] if len(finalMatch) > 0 else None
+
+    return finalMatch
+
+
+def _getFinalSeriesMatchFromResults(results : list[dict], series : Series = None) -> dict:
+    # Takes list[dict] and filters it to return a single dict object
+    match = None
+
+    if results is not None and isinstance(results, list):
+        filteredResultsList = _filterSeriesResults(results, series)
+
+        issueNumList = series.getIssueNumsList()
+        if issueNumList is not None:
+            match = _checkSeriesIssuesMatch(filteredResultsList, series)
+    
+    return match
+
+
 def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInformationSource.SourceType = None) -> None:
     match = None
 
@@ -210,7 +394,7 @@ def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInforma
             
             if seriesResults is not None and len(seriesResults) > 0:
                 # Results found - get exact match
-                match = _getFinalMatchFromResultsList(seriesResults,series)
+                match = _getFinalSeriesMatchFromResults(seriesResults,series)
             
             if match is not None:
                 #try:
@@ -225,7 +409,7 @@ def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInforma
     #if series is not None and isinstance(series, Series) and series.dataSourceType == ComicInformationSource.SourceType.Comicvine:
 
 
-def _getFinalMatchFromResultsList(results : list[dict], series : Series = None) -> dict:
+def _getFinalSeriesMatchFromResults(results : list[dict], series : Series) -> dict:
     # Takes list[dict] and filters it to return a single dict object
     match = None
 
@@ -261,6 +445,7 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
 
                     seriesIssueNumbers = series.getIssueNumsList()
 
+                    # TODO : Account for series start years at different times
                     # Quick test to check that numResults >= numSeriesIssues 
                     if len(seriesIssues) < len(seriesIssueNumbers):
                         exactSeriesMatch = False
@@ -289,6 +474,11 @@ def _addSeriesToList(series : Series) -> None:
     # Add series to master series dict 
     _series[series.key] = _series[series.id] = series
 
+def _addReadingList(readingList : ReadingList) -> None:
+    # Add series to master series dict 
+    if isinstance(readingList, ReadingList):
+        _readingLists[readingList.source] = _readingLists[readingList.id] = readingList
+
 def createNewSeries(name : str, startYear : int, seriesID : str = None) -> Series :
     newSeries = Series(name, startYear)
     newSeries.id = seriesID
@@ -308,10 +498,15 @@ def getIssueFromIssueID(issueID : str) -> Issue:
         if isinstance(curDataSource, ComicInformationSource):
             issueData = curDataSource.getIssueFromIssueID(issueID)
 
-            if isinstance(issueData,list):
+            if isinstance(issueData,list) and len(issueData) > 0:
                 issueData = issueData[0]
-                issue = Issue(None,issueData['issueNum'],curDataSource.type)
-                issue.updateDetailsFromDict(issueData)
+                if isinstance(issueData, dict):
+                    issue = Issue.fromDict(issueData)
+                    seriesID = issueData['seriesID']
+                    if utilities.isValidID(seriesID):
+                        series = getSeriesFromSeriesID(seriesID)
+                        if isinstance(series, Series):
+                            series.addIssue(issue)
 
             if isinstance(issue, Issue):
                 break
@@ -329,9 +524,9 @@ def _getSeriesIssueDetails(seriesObject : Series) -> None:
                             curIssue = seriesObject.issueList[issueDetails['issueNum']]
                             if isinstance(curIssue, Issue):
                                 curIssue.updateDetailsFromDict(issueDetails)
-                                curIssue.dataSourceType = dataSource.type
+                                curIssue.sourceType = dataSource.type
                                 if dataSource.type == ComicInformationSource.SourceType.Comicvine:
-                                    dataDB.addIssue(curIssue.getDict())
+                                    dataDB.addIssue(curIssue.getDBDict())
             
             if seriesObject.hasCompleteIssueDetails():
                 break
@@ -352,7 +547,7 @@ def getIssueFromIDs(seriesID : str, issueID : str) -> Issue:
     issue = None
 
     if None not in (seriesID, issueID):
-        series = getSeriesFromID(seriesID)
+        series = getSeriesFromSeriesID(seriesID)
         issue = getIssueFromIssueID(issueID)
         if isinstance(series, Series) and isinstance(issue, Issue):
             series.addIssue(issue)
@@ -363,14 +558,14 @@ def getIssueFromSeriesID(seriesID : str, issueNumber : str) -> Issue:
     issue = None
 
     if None not in (seriesID, issueNumber):
-        series = getSeriesFromID(seriesID)
+        series = getSeriesFromSeriesID(seriesID)
         issue = series.getIssue(issueNumber)
         if isinstance(series, Series) and isinstance(issue, Issue):
             series.addIssue(issue)
     
     return issue
 
-def printSummaryResults(readingLists : list[ReadingList]):
+def printSummaryResults():
 
     printResults("*** Comic Information Sources ***", 2)
     for dataSource in dataSources:
@@ -386,8 +581,10 @@ def printSummaryResults(readingLists : list[ReadingList]):
 
     printResults("*** Reading List Statistics ***", 2)
     readingListCompleteIssuesCount = 0
+
+    readingListSet = set(_readingLists.values())
     
-    for readingList in readingLists:
+    for readingList in readingListSet:
         if isinstance(readingList, ReadingList):
             seriesDetailsFound = issueDetailsFound = 0
             seriesSet = set()
@@ -414,7 +611,7 @@ def printSummaryResults(readingLists : list[ReadingList]):
             #    printResults("Issues Found : %s / %s" % (issueDetailsFound,issueListLength), 4)
 
     printResults("Reading List Summary", 3)
-    printResults("Complete List Details Found : %s / %s" % (readingListCompleteIssuesCount,len(readingLists)), 4)
+    printResults("Complete List Details Found : %s / %s" % (readingListCompleteIssuesCount,len(readingListSet)), 4)
 
 
     printResults("*** Series Statistics ***", 2)

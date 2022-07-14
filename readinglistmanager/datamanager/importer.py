@@ -11,6 +11,8 @@ from readinglistmanager.model.issue import Issue
 import xml.etree.ElementTree as ET
 
 dbTables = {'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'}
+totalProblemEntries = 0
+totalProblemReadingLists = 0
 
 def parseCBLfiles():
 
@@ -21,18 +23,18 @@ def parseCBLfiles():
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
                 #try:
-                filename = file
-                filePath = os.path.join(root, file)
+                curFilename = file
+                curFilePath = os.path.join(root, file)
                 # print("Parsing %s" % (filename))
-                tree = ET.parse(filePath)
+                tree = ET.parse(curFilePath)
                 fileroot = tree.getroot()
                 cblBooks = fileroot.findall("./Books/Book")
 
                 #cblBooks = fileroot.findall("./Books/Book")
 
-                cblSource = datasource.Source(filename, filePath, datasource.ListSourceType.CBL)
+                cblSource = datasource.Source(curFilename, curFilePath, datasource.ListSourceType.CBL)
 
-                readingList = ReadingList(file, cblSource)
+                readingList = ReadingList(source = cblSource, filePath = curFilePath)
 
                 i = 0
                 bookCount = len(cblBooks)
@@ -90,6 +92,7 @@ def parseCBLfiles():
 
 
 def getOnlineLists():
+    global totalProblemEntries, totalProblemReadingLists
 
     onlineLists = []
 
@@ -98,7 +101,7 @@ def getOnlineLists():
         for file in files:
             if file.endswith(".db"):
                 # TODO : Re-enable cbro.db
-                if not (file == "cv.db" or file == "data.db" or file == "cbro.db"):
+                if not (file == "cv.db" or file == "data.db"):
                     #try:
                     # Create Source object
                     filePath = os.path.join(root, file)
@@ -112,25 +115,26 @@ def getOnlineLists():
                     curListNames = curDB.getListNames()
 
                     for readingList in curListNames:
-                        listID = readingList[0]
-                        listName = readingList[1]
+                        curDBListID = readingList[0]
+                        curListName = readingList[1]
 
-                        curReadingList = ReadingList(listName, curSource, listID)
+                        curReadingList = ReadingList(source = curSource, listName = curListName)
 
                         # Get all reading list entries from readinglist DB table
                         printResults("Getting issue details for %s" % (curReadingList.name), 3)
-                        curListDetails = curDB.getListDetails(curReadingList.id)
+                        curListDetails = curDB.getListDetails(curDBListID)
 
                         count = len(curListDetails)
                         i = 0
+                        curProblemEntries = 0
 
                         # Get details for each list entry from issue DB table
 
                         for listEntry in curListDetails:
                             i += 1
                             printResults("Processing %s / %s" % (i,count),4,False,True)
-                            listEntryNum = listEntry[1]
-                            listEntryID = listEntry[2]
+                            listEntryNum = listEntry[2]
+                            listEntryID = listEntry[1]
 
                             entryMatches = curDB.getIssueDetails(listEntryID)
                             #printResults("%s entries found for hrnum='%s'" % (len(entryMatches), listEntryID), 5)
@@ -139,17 +143,22 @@ def getOnlineLists():
 
                             if numMatches > 0:
                                 if numMatches > 1:
-                                    printResults("Warning: Multiple db entries found for issue with hrnum='%s' in %s" % (
+                                    printResults("Reading-List Warning: Multiple db entries found for issue with entry ID='%s' in %s" % (
                                         listEntryID, readingList.name), 4)
                                 
                                 #for issueEntry in entryMatches:
                                 _, seriesName, seriesStartYear, issueNum, _ = entryMatches[0]
 
-                                if seriesName is None or seriesStartYear is None:
-                                    printResults("ReadingList Error: Invalid DB entry : %s" % (str(entryMatches[0])),4)
+                                if None in (seriesName, seriesStartYear):
+                                    curProblemEntries += 1
                                 else:
                                     curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
                                     curReadingList.addIssue(listEntryNum, curIssue)
+                        
+                        totalProblemEntries += curProblemEntries
+                        if curProblemEntries > 0: 
+                            totalProblemReadingLists += 1
+                            printResults("Reading-List Warning: %s invalid entries" % (curProblemEntries),4)
 
                         onlineLists.append(curReadingList)
                     #except Exception as e:

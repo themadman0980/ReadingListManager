@@ -71,7 +71,16 @@ class DataDB(DB,ComicInformationSource):
                     coverDate = utilities.getDateFromString(coverDate)
                 except: 
                     printResults("Error: Unable to process cover date \"%s\"" % (coverDate,), 4)
-                curResult.update({'issueID':issueID, 'seriesID':seriesID, 'name':name, 'coverDate':coverDate,'issueNum':issueNum,'description':description,'summary':summary})
+                curResult.update({
+                    'issueID':issueID, 
+                    'seriesID':seriesID, 
+                    'name':name, 
+                    'coverDate':coverDate,
+                    'issueNum':str(issueNum),
+                    'description':description,
+                    'summary':summary,
+                    'dataSource':self.type
+                    })
                 results.append(curResult)
         
         if len(results) == 0:
@@ -91,7 +100,14 @@ class DataDB(DB,ComicInformationSource):
             for result in seriesResults:
                 curResult = ComicInformationSource._seriesDetailsTemplate.copy()
                 seriesID, name, startYear, numIssues, publisher = result
-                curResult.update({'seriesID':seriesID,'name':name,'startYear':startYear,'publisher':publisher,'numIssues':numIssues})
+                curResult.update({
+                    'seriesID':seriesID,
+                    'name':name,
+                    'startYear':startYear,
+                    'publisher':publisher,
+                    'numIssues':numIssues,
+                    'dataSource':self.type
+                    })
                 results.append(curResult)
         
         if len(results) == 0:

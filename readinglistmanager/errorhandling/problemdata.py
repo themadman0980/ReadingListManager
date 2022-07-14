@@ -10,6 +10,7 @@ class ProblemData():
         CVSimilarMatch = "Similar CV Match"
         CVIncorrectYear = "CV Match With Incorrect Year"
         PublisherBlacklisted = "Publisher on Blacklist"
+        NameCleaned = "Name Cleaned"
         MultipleMatch = "Multiple Matches"
         InvalidSeriesNameEncoding = "Invalid Series Name Encoding"
         DBError = "DB Error"
@@ -21,6 +22,7 @@ class ProblemData():
 
     _list = dict((problem,[]) for problem in ProblemType)
     _problemSeries = set()
+    _problemReadingLists = set()
 
     def __init__(self,type,data=None):
         self.type = type
@@ -37,6 +39,13 @@ class ProblemData():
         if isinstance(problemType, ProblemData.ProblemType):
             ProblemData._list[problemType].append(ProblemSeries(series,problemType,extraData))
             ProblemData._problemSeries.add(series)
+
+    @classmethod
+    def addReadingListEntry(self, readingList, problemType : ProblemType, extraData=None):
+        #if series not in ProblemData._problemSeries:
+        if isinstance(problemType, ProblemData.ProblemType):
+            ProblemData._list[problemType].append(ProblemReadingList(readingList, problemType, extraData))
+            ProblemData._problemReadingLists.add(readingList)
 
 
 #    def _checkForPartialMatch(self,nameClean,cvResults):
@@ -107,3 +116,15 @@ class ProblemSeries(ProblemData):
 
     def __getattr__(self, attr):
         return getattr(self.series, attr)
+
+
+class ProblemReadingList(ProblemData):
+
+    def __init__(self, readingList : 'ReadingList', problemType : ProblemData.ProblemType, extraData=None):
+        super().__init__(problemType,extraData)
+        #self._checkForPartialMatch(series.nameClean,series.cvResultsSeries)
+        self.readingList = readingList
+#        self._addToList()
+
+    def __getattr__(self, attr):
+        return getattr(self.readingList, attr)
