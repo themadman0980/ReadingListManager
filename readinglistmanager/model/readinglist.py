@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from readinglistmanager.utilities import _cleanReadingListName, printResults
+from readinglistmanager.utilities import printResults
 import os, datetime, re
 from readinglistmanager.model.issue import Issue
 from readinglistmanager.model.series import Series
@@ -23,13 +23,6 @@ class ReadingList:
 #        printResults("All issues matched: %s / %s" %
 #                     (ReadingList.numCompleteIssueMatches, ReadingList.count), 3)
     
-    @classmethod
-    def generateCBLs(self, readingLists : list):
-        if readingLists is not None and isinstance(readingLists, list):
-            for readingList in readingLists:
-                if isinstance(readingList, ReadingList):
-                    readingList.writeToCBL()
-
     def writeToCBL(self):
         #sourcePath = self.source.file
         destFolder = None
@@ -41,6 +34,8 @@ class ReadingList:
             destFolder = os.path.join(filemanager.cblOutputDirectory,self.source.type.value)
             if self.source.type == datasource.ListSourceType.CBL:
                 destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolder)
+            elif self.source.type == datasource.ListSourceType.Website:
+                destFolder = os.path.join(destFolder,self.source.name)
             #    destFolderTop = os.path.join(filemanager.cblOutputDirectory,"CBL")
             #elif self.source.type == datasource.ListSourceType.Website:
             #    destFolder = os.path.join(filemanager.cblOutputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
@@ -117,7 +112,7 @@ class ReadingList:
         
         self.publisher = curPublisher
 
-    def __init__(self, source, listName = None, listID = None, filePath = None):
+    def __init__(self, source : datasource.Source, listName = None, listID = None, filePath = None):
         try:
             self._name = None
             self.problems = dict()
@@ -127,6 +122,7 @@ class ReadingList:
             self.source = source
             self.id = listID
             self.part = None
+            self.key = None
 
             if listName is not None:
                 self.name = listName
@@ -136,11 +132,28 @@ class ReadingList:
                 if isinstance(source, datasource.Source):
                     self.name = source.file
 
+            if self.source is not None and isinstance(self.source, datasource.Source):
+                self.key = ReadingList.getKey(self.dynamicName,self.source.type,self.source.name)
+
             self.dataSourceType = None
             self.checked = dict()
             self.issueList = dict()
         except Exception as e:
             printResults("Error: Problem initialising new list %s [%s] : %s" % (listName, source, str(e)), 4)
+
+    def __hash__(self):
+        return hash((self.dynamicName, self.source.type, self.source.name))
+
+    @classmethod
+    def getKey(self, dynamicListName : str, listSourceType : datasource.ListSourceType, listSourceName : str = None):
+        keyList = list()
+        if dynamicListName is not None and isinstance(dynamicListName, str):
+            keyList.append(dynamicListName)
+        if listSourceType is not None and isinstance(dynamicListName, datasource.ListSourceType):
+            keyList.append(listSourceType.value)
+        if listSourceName is not None and isinstance(listSourceName, str):
+            keyList.append(listSourceName.replace(' ',''))
+        return "-".join(keyList)
 
     def getSummary(self) -> dict:
         issuesMatched = seriesMatched = 0
@@ -228,7 +241,10 @@ class ReadingList:
             fileName.append("Part #%s" % str(self.part))
 
         if isinstance(self.source, datasource.Source) and isinstance(self.source.type, datasource.ListSourceType):
-            fileName.append("(%s)" % self.source.type.value)
+            sourceString = self.source.type.value
+            if self.source.type == datasource.ListSourceType.Website:
+                sourceString += '-%s' % self.source.name
+            fileName.append("(%s)" % sourceString)
         
         return " ".join(fileName)
 

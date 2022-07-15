@@ -107,10 +107,10 @@ def getOnlineLists():
                     filePath = os.path.join(root, file)
                     fileName = str(file).replace(".db","").upper()
 
-                    curSource = datasource.Source(fileName,filePath,datasource.ListSourceType.Website,dbTables)
+                    curDBSource = datasource.Source(name = fileName, file = filePath, sourceType = datasource.ListSourceType.Website, tableDict = dbTables)
 
                     # Create DB connection
-                    curDB = dbManager.ListDB(curSource)
+                    curDB = dbManager.ListDB(curDBSource)
 
                     curListNames = curDB.getListNames()
 
@@ -118,7 +118,7 @@ def getOnlineLists():
                         curDBListID = readingList[0]
                         curListName = readingList[1]
 
-                        curReadingList = ReadingList(source = curSource, listName = curListName)
+                        curReadingList = ReadingList(source = curDBSource, listName = curListName)
 
                         # Get all reading list entries from readinglist DB table
                         printResults("Getting issue details for %s" % (curReadingList.name), 3)

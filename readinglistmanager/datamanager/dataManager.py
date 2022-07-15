@@ -7,7 +7,7 @@ from readinglistmanager import filemanager,utilities,config
 from readinglistmanager.utilities import printResults
 from readinglistmanager.errorhandling.problemdata import ProblemData
 from readinglistmanager.datamanager import cvManager,dbManager,datasource, save
-from readinglistmanager.datamanager.datasource import ComicInformationSource
+from readinglistmanager.datamanager.datasource import ComicInformationSource, DataSourceType, ListSourceType
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.issue import Issue
@@ -112,8 +112,14 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
     return series
 
 def generateCBLs():
-    readingLists = list(set(_readingLists.values()))
-    ReadingList.generateCBLs(readingLists) 
+    readingLists = set(_readingLists.values())
+    if readingLists is not None and isinstance(readingLists, set):
+        for readingList in readingLists:
+            if isinstance(readingList, ReadingList):
+                if readingList.source.type == datasource.ListSourceType.Website:
+                    string = ""   
+
+                readingList.writeToCBL()
 
 
 def validateReadingLists(readingLists : list[ReadingList]) -> None:
@@ -131,12 +137,16 @@ def validateReadingLists(readingLists : list[ReadingList]) -> None:
     readingListNames = set(readingList.name for readingList in readingLists)
     outputFile = os.path.join(filemanager.outputDirectory,'cvListLookup.txt')
     save.saveListData(outputFile, readingListNames)
+    
+    if isinstance(readingLists, list):
+        for readingList in readingLists:
+            i += 1
+            if isinstance(readingList, ReadingList):
+                if readingList.source.type == ListSourceType.Website:
+                    string = ""
 
-    for readingList in readingLists:
-        i += 1
-        if isinstance(readingList, ReadingList):
-            _updateReadingListFromDataSources(readingList,dataSourceType)
-            printResults("%s / %s reading lists checked" % (i,numLists), 3, False, True)
+                _updateReadingListFromDataSources(readingList,dataSourceType)
+                printResults("%s / %s reading lists checked" % (i,numLists), 3, False, True)
 
 
 def validateSeries() -> None:
@@ -477,7 +487,8 @@ def _addSeriesToList(series : Series) -> None:
 def _addReadingList(readingList : ReadingList) -> None:
     # Add series to master series dict 
     if isinstance(readingList, ReadingList):
-        _readingLists[readingList.source] = _readingLists[readingList.id] = readingList
+        _readingLists[readingList.key] = readingList
+        _readingLists[readingList.id] = readingList
 
 def createNewSeries(name : str, startYear : int, seriesID : str = None) -> Series :
     newSeries = Series(name, startYear)
