@@ -112,13 +112,10 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
     return series
 
 def generateCBLs():
-    readingLists = set(_readingLists.values())
-    if readingLists is not None and isinstance(readingLists, set):
-        for readingList in readingLists:
+    readingListSet = set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList))
+    if readingListSet is not None and isinstance(readingListSet, set):
+        for readingList in readingListSet:
             if isinstance(readingList, ReadingList):
-                if readingList.source.type == datasource.ListSourceType.Website:
-                    string = ""   
-
                 readingList.writeToCBL()
 
 
@@ -482,13 +479,17 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
 
 def _addSeriesToList(series : Series) -> None:
     # Add series to master series dict 
-    _series[series.key] = _series[series.id] = series
+    _series[series.key] = series
+    _series[series.id] = series
 
 def _addReadingList(readingList : ReadingList) -> None:
     # Add series to master series dict 
     if isinstance(readingList, ReadingList):
         _readingLists[readingList.key] = readingList
-        _readingLists[readingList.id] = readingList
+        if readingList.id in _readingLists:
+            _readingLists[readingList.id].append(readingList)
+        else:
+            _readingLists[readingList.id] = [readingList]
 
 def createNewSeries(name : str, startYear : int, seriesID : str = None) -> Series :
     newSeries = Series(name, startYear)
@@ -593,7 +594,7 @@ def printSummaryResults():
     printResults("*** Reading List Statistics ***", 2)
     readingListCompleteIssuesCount = 0
 
-    readingListSet = set(_readingLists.values())
+    readingListSet = set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList))
     
     for readingList in readingListSet:
         if isinstance(readingList, ReadingList):

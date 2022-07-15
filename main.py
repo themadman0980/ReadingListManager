@@ -44,10 +44,12 @@ def main():
     #ReadingList.printSummaryResults(readingLists)
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()
-    printResults("Saving lists to JSON...", 1, True)
+    printResults("Writing data to files...", 1, True)
+    printResults("JSON", 2, True)
     save.saveLists(readingLists)
-    printResults("Generating CBL files...", 1, True)
+    printResults("CBL", 2, True)
     dataManager.generateCBLs()
+    printResults("ProblemData", 2, True)
     problemdata.ProblemData.exportToFile()
 
 if __name__ == "__main__":
