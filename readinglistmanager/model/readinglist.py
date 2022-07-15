@@ -38,16 +38,19 @@ class ReadingList:
                 sourceFolder = os.path.dirname(self.source.file)
             # Set output to subdirectory of output folder
             #Set top level of cbl output destination
+            destFolder = os.path.join(filemanager.cblOutputDirectory,self.source.type.value)
             if self.source.type == datasource.ListSourceType.CBL:
-                destFolderTop = os.path.join(filemanager.cblOutputDirectory,"CBL")
-                destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolderTop)
-            if self.source.type == datasource.ListSourceType.Website:
-                destFolder = os.path.join(filemanager.cblOutputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
+                destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolder)
+            #    destFolderTop = os.path.join(filemanager.cblOutputDirectory,"CBL")
+            #elif self.source.type == datasource.ListSourceType.Website:
+            #    destFolder = os.path.join(filemanager.cblOutputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
+            #elif self.source.type == datasource.ListSourceType.CV:
+            #    destFolder = os.path.join(filemanager.cblOutputDirectory,"CV",utilities.sanitisePathString(self.source.name))
 
             # Set full path to CBL, keeping relative location
         if destFolder is None:
             # Set output file to output folder
-            destFolder = filemanager.outputDirectory
+            destFolder = filemanager.cblOutputDirectory
 
         fileName = "%s.cbl" % (utilities.sanitisePathString(self.name))
 
@@ -237,8 +240,8 @@ class ReadingList:
             return self._name
 
         def fset(self, value):
-            self.dynamicName = utilities.getDynamicName(self._name)
             self._cleanName(value)
+            self.dynamicName = utilities.getDynamicName(self._name)
 
         def fdel(self):
             del self._name
