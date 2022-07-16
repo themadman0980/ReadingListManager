@@ -3,6 +3,7 @@
 from abc import abstractmethod
 from readinglistmanager.utilities import printResults
 import os
+from html import unescape
 from enum import Enum
 
 class DataSourceType(Enum):
@@ -148,3 +149,37 @@ class ComicInformationSource():
     @abstractmethod
     def convertReadingListResultsToDict(self, searchResults : list, resultsType : ResultType) -> list[dict]:
         pass
+
+    # Returns the issue print format as an IssueType 
+    @classmethod
+    def _getIssueType(self, name : str, description : str, summary : str) -> IssueType:
+        curDescription = description
+        curSummary = summary
+        curName = name
+
+        if curDescription is None or not isinstance(curDescription,str):
+            curDescription = ''
+        if curSummary is None or not isinstance(curSummary,str):
+            curSummary = ''
+        if curName is None or not isinstance(curName,str):
+            curName = ''
+        
+        curSummary = unescape(curSummary.lower())
+        curDescription = unescape(curDescription.lower())
+        
+        namestarts = [
+            'hc', 
+            #'volume ', 
+            'tpb',
+            #'book '
+            ]
+        for tn in namestarts:
+            if curName.startswith(tn):
+                return ComicInformationSource.IssueType.Trade
+
+        descphrases = ['collecting', 'collects']
+        for tn in descphrases:
+            if tn in curDescription:
+                return ComicInformationSource.IssueType.Trade
+            
+        return ComicInformationSource.IssueType.Issue

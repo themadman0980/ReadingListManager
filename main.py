@@ -45,11 +45,8 @@ def main():
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()
     printResults("Writing data to files...", 1, True)
-    printResults("JSON", 2, True)
-    save.saveLists(readingLists)
-    printResults("CBL", 2, True)
-    dataManager.generateCBLs()
-    printResults("ProblemData", 2, True)
+    dataManager.saveReadingLists()
+    printResults("Saving problem data...", 1, True)
     problemdata.ProblemData.exportToFile()
 
 if __name__ == "__main__":

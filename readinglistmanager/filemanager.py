@@ -53,3 +53,12 @@ def fileExists(file : str) -> bool:
         return True
     
     return False
+
+def checkFilePath(string):
+    folder = os.path.dirname(string)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+def checkFolderPath(string):
+    if not os.path.exists(string):
+        os.makedirs(string)

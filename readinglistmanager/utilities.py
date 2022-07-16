@@ -93,11 +93,6 @@ def isValidID(ID):
 #    return s2
 #
 
-def checkPath(string):
-    folder = os.path.dirname(string)
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
 def getCleanYear(string):
     cleanString = re.sub(yearStringCleanTemplate, '', str(string))
     

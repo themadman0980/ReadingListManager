@@ -96,6 +96,7 @@ class Issue:
             'SeriesName': self.series.name,
             'SeriesStartYear': self.series.startYear,
             'IssueNum': self.issueNumber,
+            'IssueType': None,
             'CoverDate': self.coverDateString,
             'Database': {
                 'Name':'Comicvine',
@@ -103,4 +104,8 @@ class Issue:
                 'IssueID': self.id
                 }
             }
+
+        if self.issueType is not None:
+            data.update({'IssueType': self.issueType.value})
+
         return data

@@ -78,7 +78,7 @@ def getSeriesFromIssueID(issueID : str) -> Series:
     series = None
 
     for source in dataSources:
-        if isinstance(source, ComicInformationSource):
+        if isinstance(source, ComicInformationSource) and config.CV.c:
             issueDetails = source.getIssueFromIssueID(issueID)
             if issueDetails is not None and isinstance(issueDetails, dict):
                 seriesID = issueDetails['seriesID']
@@ -118,6 +118,21 @@ def generateCBLs():
             if isinstance(readingList, ReadingList):
                 readingList.writeToCBL()
 
+def compareReadingListSources():
+    readingListSet = set(readingListdata for readingListdata in _readingLists.values() if isinstance(readingListdata, list))
+    for listData in readingListSet:
+        for readingList in listData:
+            #Get list of all alternate lists for same event
+            otherLists = list(otherReadingList for otherReadingList in listData if isinstance(otherReadingList, ReadingList))
+            otherLists.remove(readingList)
+
+            if isinstance(readingList, ReadingList):
+                # Do something
+                for issueNum,issue in readingList.issueList.items():
+                    for otherReadingList in otherLists:
+                        if issue in otherReadingList.issueList.values():
+                            pass
+                            # otherIssueNum = otherReadingList.issueList.items().
 
 def validateReadingLists(readingLists : list[ReadingList]) -> None:
     dataSourceType = ComicInformationSource.SourceType.Comicvine
@@ -131,17 +146,13 @@ def validateReadingLists(readingLists : list[ReadingList]) -> None:
     i = 0
     printResults("Checking %s reading lists" % (numLists), 2)
 
-    readingListNames = set(readingList.name for readingList in readingLists)
-    outputFile = os.path.join(filemanager.outputDirectory,'cvListLookup.txt')
-    save.saveListData(outputFile, readingListNames)
+    readingListNames = list(set(readingList.name for readingList in readingLists))
+    save.saveDataListToTXT('cvListLookup', readingListNames)
     
     if isinstance(readingLists, list):
         for readingList in readingLists:
             i += 1
             if isinstance(readingList, ReadingList):
-                if readingList.source.type == ListSourceType.Website:
-                    string = ""
-
                 _updateReadingListFromDataSources(readingList,dataSourceType)
                 printResults("%s / %s reading lists checked" % (i,numLists), 3, False, True)
 
@@ -186,20 +197,22 @@ def validateSeries() -> None:
             if not series.hasValidID(): 
                 unmatchedCVSet.add(series)
     
+    numSeriesUnmatchedCV = len(unmatchedCVSet)
     # Reprocess all series names for unmatched series
-
+    printResults("Validation : Reprocessing Unmatched Series With Cleaned Name = %s" % (numSeriesUnmatchedCV),3)
     i = 0
     counter = {'processed':0,'cleaned':0, 'matches': 0}
     for series in unmatchedCVSet:
+        i += 1
         if isinstance(series, Series):
+            printResults("[%s / %s] : Reprocessing %s (%s) [%s]" % (i, numSeriesUnmatchedCV, series.name, series.startYear, series.id), 4, False, True)
             counter['processed'] += 1
-            i += 1
             cleanedSeriesName = utilities._cleanSeriesName(series.name)
             if cleanedSeriesName != series.name:
                 counter['cleaned'] += 1
                 series.addProblem(ProblemData.ProblemType.NameCleaned,"Original: \'%s\', Cleaned: \'%s\'" % (series.name, cleanedSeriesName))
                 series.name = cleanedSeriesName
-                _updateSeriesFromDataSources(series,sourceType)
+                _updateSeriesFromDataSources(series)
                 _addSeriesToList(series)
 
                 if series.hasValidID():
@@ -208,9 +221,8 @@ def validateSeries() -> None:
     printResults("%s / %s series names cleaned, with %s new matches found" % (counter['cleaned'],counter['processed'],counter['matches']), 3)
     # Save unmatched series to file
 
-    cvSeriesNames = set(series.name for series in checkCVSeriesSet if isinstance(series, Series))
-    outputFile = os.path.join(filemanager.outputDirectory,'cvSeriesLookup.txt')
-    save.saveListData(outputFile, cvSeriesNames)
+    cvSeriesNames = list(set(series.name for series in checkCVSeriesSet if isinstance(series, Series)))
+    save.saveDataListToTXT('cvSeriesLookup', cvSeriesNames)
 
 def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dict]]:
     preferredType = ComicInformationSource.ResultFilterType.Preferred 
@@ -661,3 +673,13 @@ def processProblemData():
             curProblemData = series.problems
             for problemType, data in curProblemData.items():
                 ProblemData.addSeriesEntry(series, problemType, data)
+
+def saveReadingLists():
+    # Get list of all readinglists
+    readingLists = list(set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList)))
+
+    printResults("JSON", 2, True)
+    save.saveReadingLists(readingLists,save.OutputFileType.JSON)
+
+    printResults("CBL", 2, True)
+    save.saveReadingLists(readingLists,save.OutputFileType.CBL)

@@ -67,6 +67,7 @@ class DataDB(DB,ComicInformationSource):
             for result in issueResults:
                 curResult = ComicInformationSource._issueDetailsTemplate.copy()
                 issueID,seriesID,name,coverDate,issueNum,description,summary = result
+                issueType = ComicInformationSource._getIssueType(name, description, summary)
                 try: 
                     coverDate = utilities.getDateFromString(coverDate)
                 except: 
@@ -77,6 +78,7 @@ class DataDB(DB,ComicInformationSource):
                     'name':name, 
                     'coverDate':coverDate,
                     'issueNum':str(issueNum),
+                    'issueType':issueType,
                     'description':description,
                     'summary':summary,
                     'dataSource':self.type

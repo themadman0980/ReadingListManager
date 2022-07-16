@@ -22,76 +22,69 @@ class ReadingList:
 #                     (ReadingList.numCompleteSeriesMatches, ReadingList.count), 3)
 #        printResults("All issues matched: %s / %s" %
 #                     (ReadingList.numCompleteIssueMatches, ReadingList.count), 3)
-    
-    def writeToCBL(self):
-        #sourcePath = self.source.file
-        destFolder = None
+    def getCBLData(self):
+        lines = []
+
+        lines.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+        lines.append("<ReadingList xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">")
+        lines.append("<Name>%s</Name>" % (self.name))
+        if self.getNumIssues() is not None: 
+            lines.append("<NumIssues>%s</NumIssues>" % (self.getNumIssues()))
+        lines.append("<Source>%s</Source>" % (self.source.name))
+        if self.id is not None and utilities.isValidID(self.id):
+            lines.append("<Database Name=\"cv\" ID=\"%s\" />" % (self.id))
+        lines.append("<Books>")
+
+        #For each issue in arc
+        for key,issue in sorted(self.issueList.items()):
+            if isinstance(issue,Issue):
+                # Check if issue cover date exists
+                if issue.coverDate is not None and isinstance(issue.coverDate,datetime.datetime):
+                    issueYear = issue.coverDate.year
+                else:
+                    issueYear = issue.year
+
+                seriesName = utilities.escapeString(issue.series.name)
+                issueNum = utilities.escapeString(issue.issueNumber)
+
+                if issue.hasValidID() or (isinstance(issue.series, Series) and issue.series.hasValidID()):
+                    lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (seriesName,issueNum,issue.series.startYear,issueYear))
+                    lines.append("<Database Name=\"cv\" Series=\"%s\" Issue=\"%s\" />" % (issue.series.id,issue.id))
+                    lines.append("</Book>")
+                else:
+                    lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" % (seriesName,issueNum,issue.series.startYear,issueYear))
+
+        lines.append("</Books>")
+        lines.append("<Matchers />")
+        lines.append("</ReadingList>")
+
+        return lines
+
+    def getTXTData(self):
+        return "%s : %s issues" % (self.getFileName(), self.getNumIssues())
+
+    def getJSONData(self):
+
+        listData = dict()
+
+        listData['ListName'] = self.name        
+        listData['Publisher'] = self.publisher
+        listData['IssueCount'] = self.getNumIssues()
+        #listData['Type'] = None
         if isinstance(self.source, datasource.Source):
-            if isinstance(self.source.file, str):
-                sourceFolder = os.path.dirname(self.source.file)
-            # Set output to subdirectory of output folder
-            #Set top level of cbl output destination
-            destFolder = os.path.join(filemanager.cblOutputDirectory,self.source.type.value)
-            if self.source.type == datasource.ListSourceType.CBL:
-                destFolder = str(sourceFolder).replace(filemanager.readingListDirectory,destFolder)
-            elif self.source.type == datasource.ListSourceType.Website:
-                destFolder = os.path.join(destFolder,self.source.name)
-            #    destFolderTop = os.path.join(filemanager.cblOutputDirectory,"CBL")
-            #elif self.source.type == datasource.ListSourceType.Website:
-            #    destFolder = os.path.join(filemanager.cblOutputDirectory,"WEB",utilities.sanitisePathString(self.source.name))
-            #elif self.source.type == datasource.ListSourceType.CV:
-            #    destFolder = os.path.join(filemanager.cblOutputDirectory,"CV",utilities.sanitisePathString(self.source.name))
+            listData['Source'] = self.source.name
 
-            # Set full path to CBL, keeping relative location
-        if destFolder is None:
-            # Set output file to output folder
-            destFolder = filemanager.cblOutputDirectory
+        if utilities.isValidID(self.id):
+            listData['Database'] = list()
+            database = {'Name' : 'Comicvine', 'ID':self.id}
+            listData['Database'].append(database)
 
-        fileName = "%s.cbl" % (utilities.sanitisePathString(self.name))
-
-        file = os.path.join(destFolder,fileName)
-        utilities.checkPath(file)
-
-        with open(file, 'w') as outputFile:
-
-            lines = []
-
-            lines.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-            lines.append("<ReadingList xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">")
-            lines.append("<Name>%s</Name>" % (self.name))
-            if self.getNumIssues() is not None: 
-                lines.append("<NumIssues>%s</NumIssues>" % (self.getNumIssues()))
-            lines.append("<Source>%s</Source>" % (self.source.name))
-            if self.id is not None and utilities.isValidID(self.id):
-                lines.append("<Database Name=\"cv\" ID=\"%s\" />" % (self.id))
-            lines.append("<Books>")
-
-            #For each issue in arc
-            for key,issue in sorted(self.issueList.items()):
-                if isinstance(issue,Issue):
-                    # Check if issue cover date exists
-                    if issue.coverDate is not None and isinstance(issue.coverDate,datetime.datetime):
-                        issueYear = issue.coverDate.year
-                    else:
-                        issueYear = issue.year
-
-                    seriesName = utilities.escapeString(issue.series.name)
-                    issueNum = utilities.escapeString(issue.issueNumber)
-
-                    if issue.hasValidID() or (isinstance(issue.series, Series) and issue.series.hasValidID()):
-                        lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (seriesName,issueNum,issue.series.startYear,issueYear))
-                        lines.append("<Database Name=\"cv\" Series=\"%s\" Issue=\"%s\" />" % (issue.series.id,issue.id))
-                        lines.append("</Book>")
-                    else:
-                        lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" % (seriesName,issueNum,issue.series.startYear,issueYear))
-
-            lines.append("</Books>")
-            lines.append("<Matchers />")
-            lines.append("</ReadingList>")
-
-            outputFile.writelines(lines)
-
-            outputFile.close()
+        listData['Issues'] = dict()
+        for number,issue in self.issueList.items():
+            if isinstance(issue, Issue):
+                listData['Issues'][str(number)] = issue.getJSONDict()
+        
+        return listData
 
     def setPublisherFromIssueDetails(self):
         publisherCounts = dict()
@@ -185,6 +178,8 @@ class ReadingList:
         
         return {'issueCount':issueCount, 'issuesMatched':issuesMatched,'seriesCount':seriesCount,'seriesMatched':seriesMatched}
 
+    def isAnnual(self) -> bool:
+        return 'annual' in str(self.name).lower()
 
     def addIssue(self, entryNumber, issue):
         if isinstance(issue, Issue):
