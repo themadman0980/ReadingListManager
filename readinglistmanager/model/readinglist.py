@@ -134,7 +134,7 @@ class ReadingList:
             printResults("Error: Problem initialising new list %s [%s] : %s" % (listName, source, str(e)), 4)
 
     def __hash__(self):
-        return hash((self.dynamicName, self.source.type, self.source.name))
+        return hash((self.dynamicName, self.source))
 
     @classmethod
     def getKey(self, dynamicListName : str, listSourceType : ListSourceType, listSourceName : str = None):

@@ -17,8 +17,14 @@ totalProblemReadingLists = 0
 def parseCBLfiles():
 
     readingLists = []
+    fileCount = 0
+    for root, dirs, files in os.walk(filemanager.readingListDirectory):
+        for file in files:
+            if file.endswith(".cbl") and not file.startswith('._'):
+                fileCount += 1
 
-    printResults("Checking CBL files in %s" % (filemanager.readingListDirectory), 2)
+    processedFileCount = 0
+    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.readingListDirectory), 2)
     for root, dirs, files in os.walk(filemanager.readingListDirectory):
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
@@ -29,6 +35,7 @@ def parseCBLfiles():
                 tree = ET.parse(curFilePath)
                 fileroot = tree.getroot()
                 cblBooks = fileroot.findall("./Books/Book")
+                processedFileCount += 1
 
                 #cblBooks = fileroot.findall("./Books/Book")
 
@@ -44,7 +51,7 @@ def parseCBLfiles():
 
                 for entry in cblBooks:
                     i += 1
-                    printResults("Processing %s / %s" % (i,bookCount),4,False,True)
+                    printResults("[%s / %s] Processing %s / %s" % (processedFileCount, fileCount, i,bookCount),4,False,True)
                                         
 
                     seriesName = entry.attrib['Series']
@@ -160,7 +167,7 @@ def getOnlineLists():
                         totalProblemEntries += curProblemEntries
                         if curProblemEntries > 0: 
                             totalProblemReadingLists += 1
-                            printResults("Reading-List Warning: %s invalid entries" % (curProblemEntries),4)
+                            printResults("Reading-List Warning: %s invalid entries in list %s [%s]" % (curProblemEntries, curListName,curDBSource.name),4)
 
                         onlineLists.append(curReadingList)
                     #except Exception as e:

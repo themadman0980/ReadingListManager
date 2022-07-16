@@ -111,15 +111,8 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
 
     return series
 
-def generateCBLs():
-    readingListSet = set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList))
-    if readingListSet is not None and isinstance(readingListSet, set):
-        for readingList in readingListSet:
-            if isinstance(readingList, ReadingList):
-                readingList.writeToCBL()
-
 def compareReadingListSources():
-    readingListSet = set(readingListdata for readingListdata in _readingLists.values() if isinstance(readingListdata, list))
+    readingListSet = getReadingListSet()
     for listData in readingListSet:
         for readingList in listData:
             #Get list of all alternate lists for same event
@@ -279,7 +272,7 @@ def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dic
                         elif series.dynamicName in matchNameClean:
                             series.addProblem(ProblemData.ProblemType.CVSimilarMatch, result)
         else:
-            series.addProblem(ProblemData.ProblemType.CVNoMatch,None)
+            series.addProblem(ProblemData.ProblemType.CVNoNameYearMatch,None)
     elif numAcceptableMatches > 0:
         if numAcceptableMatches > 1:
             series.addProblem(ProblemData.ProblemType.MultipleMatch, acceptableMatches)
@@ -367,7 +360,7 @@ def _getFinalListMatchFromResults(results : list[dict], readingList : ReadingLis
 
         if finalMatch is None:
             if len(results) > 0:
-                readingList.addProblem(ProblemData.ProblemType.CVNoMatch, results)
+                readingList.addProblem(ProblemData.ProblemType.CVNoNameYearMatch, results)
             else:
                 readingList.addProblem(ProblemData.ProblemType.CVNoResults)
         else:
@@ -375,20 +368,6 @@ def _getFinalListMatchFromResults(results : list[dict], readingList : ReadingLis
             finalMatch = finalMatch[0] if len(finalMatch) > 0 else None
 
     return finalMatch
-
-
-def _getFinalSeriesMatchFromResults(results : list[dict], series : Series = None) -> dict:
-    # Takes list[dict] and filters it to return a single dict object
-    match = None
-
-    if results is not None and isinstance(results, list):
-        filteredResultsList = _filterSeriesResults(results, series)
-
-        issueNumList = series.getIssueNumsList()
-        if issueNumList is not None:
-            match = _checkSeriesIssuesMatch(filteredResultsList, series)
-    
-    return match
 
 
 def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInformationSource.SourceType = None) -> None:
@@ -438,7 +417,10 @@ def _getFinalSeriesMatchFromResults(results : list[dict], series : Series) -> di
         issueNumList = series.getIssueNumsList()
         if issueNumList is not None:
             match = _checkSeriesIssuesMatch(filteredResultsList, series)
-    
+
+            if match is None:
+                series.addProblem(ProblemData.ProblemType.CVNoIssueMatch,filteredResultsList)
+            
     return match
     
 
@@ -496,10 +478,23 @@ def _addSeriesToList(series : Series) -> None:
 
 def _addReadingList(readingList : ReadingList) -> None:
     # Add series to master series dict 
-    if isinstance(readingList, ReadingList):
-        _readingLists[readingList.key] = readingList
+     if isinstance(readingList, ReadingList):
+
+        if readingList.key in _readingLists:
+            curList = _readingLists[readingList.key]
+            if isinstance(curList, list):
+                curList.append(readingList)
+            else:
+                curList = [readingList]
+        else:
+            _readingLists[readingList.key] = [readingList]
+
         if readingList.id in _readingLists:
-            _readingLists[readingList.id].append(readingList)
+            curList = _readingLists[readingList.id]
+            if isinstance(curList, list):
+                curList.append(readingList)
+            else:
+                curList = [readingList]
         else:
             _readingLists[readingList.id] = [readingList]
 
@@ -605,9 +600,7 @@ def printSummaryResults():
 
     printResults("*** Reading List Statistics ***", 2)
     readingListCompleteIssuesCount = 0
-
-    readingListSet = set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList))
-    
+    readingListSet = getReadingListSet()
     for readingList in readingListSet:
         if isinstance(readingList, ReadingList):
             seriesDetailsFound = issueDetailsFound = 0
@@ -666,7 +659,7 @@ def printSummaryResults():
     printResults("Series Complete Issue Details Found : %s / %s" % (seriesAllIssueDetailsFound,seriesCount),3)
 
 def processProblemData():
-    seriesSet = set(_series.values())
+    seriesSet = set(series for series in _series.values() if isinstance(series, Series))
     
     for series in seriesSet:
         if isinstance(series, Series):
@@ -676,10 +669,21 @@ def processProblemData():
 
 def saveReadingLists():
     # Get list of all readinglists
-    readingLists = list(set(readingList for readingList in _readingLists.values() if isinstance(readingList, ReadingList)))
+    readingLists = list(getReadingListSet())
 
     printResults("JSON", 2, True)
     save.saveReadingLists(readingLists,save.OutputFileType.JSON)
 
     printResults("CBL", 2, True)
     save.saveReadingLists(readingLists,save.OutputFileType.CBL)
+
+def getReadingListSet():
+    readingListSet = set()
+
+    for k, v in _readingLists.items():
+        if isinstance(v, list):
+            for readingList in v:
+                if isinstance(readingList, ReadingList):
+                    readingListSet.add(readingList)
+
+    return readingListSet

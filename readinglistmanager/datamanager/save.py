@@ -32,6 +32,7 @@ class OutputFileType(Enum):
 def getOutputFile(readingList : ReadingList, fileType : OutputFileType) -> str:
     if isinstance(readingList, ReadingList) and isinstance(fileType, OutputFileType):
         fileName = readingList.getFileName() + fileType.getExtension()
+        fileName = utilities.cleanFileName(fileName)
 
         if config.Export.preserve_file_structure and fileType == OutputFileType.CBL:
             fileDir = getReadingListOutputDirectory(readingList, fileType)
@@ -59,7 +60,8 @@ def saveReadingList(readingList : ReadingList, outputFileType : OutputFileType) 
             with open(file, 'w') as outputFile:
                 json.dump(outputData, outputFile, indent=4)
 
-def saveReadingLists(readingLists : list[ReadingList], outputFileType : OutputFileType) -> None:
+def saveReadingLists(readingLists : list[ReadingList], outputFileType : OutputFileType) -> None:        
+
     if isinstance(readingLists, list) and isinstance(outputFileType, OutputFileType):
         for readingList in readingLists:
             if isinstance(readingList, ReadingList):

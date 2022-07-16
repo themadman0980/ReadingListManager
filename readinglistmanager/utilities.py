@@ -200,3 +200,13 @@ def _cleanSeriesName(seriesName : str):
                 break
             
     return newSeriesName
+
+def cleanFileName(orig_name : str):
+    orig_name = str(orig_name)
+    fixed_name = orig_name.replace('\\\\','⑊')
+    forbidden_characters = '"*/:<>?\|'
+    substitute_characters = '\'---[]   '
+    for a, b in zip(forbidden_characters, substitute_characters):
+        fixed_name = fixed_name.replace(a, b)
+    
+    return fixed_name

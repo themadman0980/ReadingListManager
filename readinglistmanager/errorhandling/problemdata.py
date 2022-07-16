@@ -5,17 +5,17 @@ import datetime
 class ProblemData():
 
     class ProblemType(Enum):
-        CVNoResults = "No CV Results"
-        CVNoMatch = "No CV Match"
+        CVNoNameYearResults = "No CV Results"
+        CVNoNameYearMatch = "No CV Match"
         CVSimilarMatch = "Similar CV Match"
         CVIncorrectYear = "CV Match With Incorrect Year"
+        CVNoIssueMatch = "Issue Not Found In CV Series"
         PublisherBlacklisted = "Publisher on Blacklist"
         NameCleaned = "Name Cleaned"
         MultipleMatch = "Multiple Matches"
         InvalidSeriesNameEncoding = "Invalid Series Name Encoding"
         DBError = "DB Error"
         IssueError = "Issue Error"
-        IssueNotFound = "Issue Not Found In CV Series"
         OverrideError = "Override ID not found"
 
     problemCount = 0
