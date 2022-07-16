@@ -5,11 +5,11 @@ import datetime
 class ProblemData():
 
     class ProblemType(Enum):
-        CVNoNameYearResults = "No CV Results"
+        CVNoResults = "No CV Results"
         CVNoNameYearMatch = "No CV Match"
+        CVNoIssueMatch = "Issue Not Found In CV Series"
         CVSimilarMatch = "Similar CV Match"
         CVIncorrectYear = "CV Match With Incorrect Year"
-        CVNoIssueMatch = "Issue Not Found In CV Series"
         PublisherBlacklisted = "Publisher on Blacklist"
         NameCleaned = "Name Cleaned"
         MultipleMatch = "Multiple Matches"
