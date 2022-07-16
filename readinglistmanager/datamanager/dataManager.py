@@ -260,6 +260,7 @@ def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dic
         if len(resultsFiltered[blacklistType]) > 0:
             series.addProblem(ProblemData.ProblemType.PublisherBlacklisted,resultsFiltered[blacklistType])
         elif len(nameOnlyMatches) > 0:
+            matchCount = 0
             # If dynamicname matches were found, see if the series year was within 2 years of expected
             for result in nameOnlyMatches:
                 matchYearClean = utilities.getCleanYear(result['startYear'])
@@ -268,11 +269,16 @@ def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dic
                     deviation = abs(int(matchYearClean) - int(series.startYear))
                     if deviation <= 2: 
                         if series.dynamicName == matchNameClean:
+                            matchCount += 1
                             series.addProblem(ProblemData.ProblemType.CVIncorrectYear, result)
                         elif series.dynamicName in matchNameClean:
+                            matchCount += 1
                             series.addProblem(ProblemData.ProblemType.CVSimilarMatch, result)
+            if matchCount == 0:
+                series.addProblem(ProblemData.ProblemType.CVNoNameYearMatch,result)
         else:
-            series.addProblem(ProblemData.ProblemType.CVNoNameYearMatch,None)
+            series.addProblem(ProblemData.ProblemType.CVNoNameYearMatch,result)
+        resultsFiltered = None
     elif numAcceptableMatches > 0:
         if numAcceptableMatches > 1:
             series.addProblem(ProblemData.ProblemType.MultipleMatch, acceptableMatches)
@@ -415,7 +421,7 @@ def _getFinalSeriesMatchFromResults(results : list[dict], series : Series) -> di
         filteredResultsList = _filterSeriesResults(results, series)
 
         issueNumList = series.getIssueNumsList()
-        if issueNumList is not None:
+        if issueNumList is not None and filteredResultsList is not None:
             match = _checkSeriesIssuesMatch(filteredResultsList, series)
 
             if match is None:
