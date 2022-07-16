@@ -14,8 +14,8 @@ configDict = {
         'check_series': True,
         'check_issues': True,
         'api_key': 'API_KEY_HERE',
-        'publisher_blacklist': [],
-        'publisher_preferred': [],
+        'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Unknown"],
+        'publisher_preferred': ["Marvel", "DC Comics"],
     },
     'Export': {
         'preserve_file_structure' : False
