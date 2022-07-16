@@ -3,66 +3,101 @@
 import configparser
 import os
 
-config = configparser.ConfigParser()
+scriptDirectory = os.getcwd()
+configFile = os.path.join(scriptDirectory, 'config.ini')
+
+config = configparser.ConfigParser(allow_no_value=True)
+
+configDict = {
+    'CV': {
+        'check_arcs': True,
+        'check_series': True,
+        'check_issues': True,
+        'api_key': 'API_KEY_HERE',
+        'publisher_blacklist': [],
+        'publisher_preferred': [],
+    },
+    'Export': {
+        'preserve_file_structure' : False
+    },
+    'Troubleshooting' : {
+        'process_cbl': True,
+        'process_web_dl': True,
+        'verbose': False,
+    }
+}
 
 def checkConfig():
-    global config
-
-    scriptDirectory = os.getcwd()
-    #rootDirectory = os.path.dirname(scriptDirectory)
-    configFile = os.path.join(scriptDirectory, 'config.ini')
-
     if not os.path.exists(configFile):
-        generateNewConfig(configFile)
+        # Read default values from dict if no file found
+        config.read_dict(configDict)
+    else:
+        # Read user values from file
+        config.read(configFile)
 
-    config.read(configFile)
-
+    # Save updated config file, including any new parameters
+    saveConfig()
         
-def generateNewConfig(configFile):
-    with open(configFile, mode='a') as file:
-        lines = []
-        lines.append('[CV]')
-        lines.append('check_arcs = True  # Enable/disable CV api calls for story arc searches')
-        lines.append('check_series = True  # Enable/disable CV api calls for volume searches')
-        lines.append('check_issues = True  # Enable/disable CV api calls for issue searches')
-        lines.append('api_key = CV_API_KEY')
-        lines.append('publisher_blacklist = "Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Unknown" # Ignore these results')
-        lines.append('publisher_preferred = "Marvel", "DC Comics" # If multiple matches found, prefer these results')
-        lines.append('')
 
-        lines.append('[Export]')
-        lines.append('preserve_file_structure = False  # Force output CBL file names & folder structure to match those provided as input')
-        lines.append('')
+def saveConfig():
+    with open(configFile, mode='w') as file:
+        config.write(file)
 
-        lines.append('[Troubleshooting]')
-        lines.append('process_cbl = True #Validate entries in CBL files')
-        lines.append('process_web_dl = True #Validate entries in databases')
-        lines.append('update_clean_names = False #Regenerate CleanName field for series in db')
-        lines.append('verbose = False #Enable verbose logging')
-
-        for line in lines:
-            if isinstance(line, str):
-                file.write('%s\n' % (line,))
 
 checkConfig()
 
-verbose = eval(config['Troubleshooting']['verbose'])
+def getConfigOption(option : str, configSection : str, type, defaultValue):
+    #Check if default matches specified type
+    if isinstance(defaultValue, type):
+        result = defaultValue
+    else:
+        result = None
+
+    if isinstance(configSection,str) and isinstance(option,str):
+        if config.has_section(configSection):
+            if config.has_option(configSection,option):
+                # Grab existing value
+                if type == bool:
+                    result = config.getboolean(configSection,option)
+                else:
+                    tempResult = config.get(configSection,option)
+                    if isinstance(tempResult, type):
+                        result = tempResult
+            else:
+                # Create new from default value
+                config.set(configSection, option, defaultValue)
+        else:
+            # Create new from default value
+            config.add_section(configSection)
+            config.set(configSection, option, defaultValue)
+       
+    return result
 
 class CV():
-    cv = config['CV']
-    check_story_arcs = eval(cv['check_arcs'])
-    check_series = eval(cv['check_series'])
-    check_issues = eval(cv['check_issues'])
-    api_key = cv['api_key']
-    publisher_blacklist = cv['publisher_blacklist']
-    publisher_preferred = cv['publisher_preferred']
+    sectionName = 'CV'
+
+    api_key = getConfigOption('api_key', sectionName, str, None)
+    if api_key is not None and api_key == 'API_KEY_HERE':
+        api_key = None
+
+    if api_key is not None:
+        check_arcs = getConfigOption('check_arcs', sectionName, bool, True)
+        check_series = getConfigOption('check_series', sectionName, bool, True)
+        check_issues = getConfigOption('check_issues', sectionName, bool, True)
+    else:
+        #Turn off all CV searching due to missing key
+        check_arcs = check_series = check_issues = False
+
+    publisher_blacklist = getConfigOption('publisher_blacklist', sectionName, list, list())
+    publisher_preferred = getConfigOption('publisher_preferred', sectionName, list, list())
 
 class Export():
-    export = config['Export']
-    preserve_file_structure = eval(export['preserve_file_structure'])
+    sectionName = 'Export'
+
+    preserve_file_structure = getConfigOption('preserve_file_structure', sectionName, bool, False)
 
 class Troubleshooting():
-    troubleshooting = config['Troubleshooting']
-    process_cbl = eval(troubleshooting['process_cbl'])
-    process_web_dl = eval(troubleshooting['process_web_dl'])
-    update_clean_names = eval(troubleshooting['update_clean_names'])
+    sectionName = 'Troubleshooting'
+    process_cbl = getConfigOption('process_cbl', sectionName, bool, True)
+    process_web_dl = getConfigOption('process_web_dl', sectionName, bool, True)
+    verbose = getConfigOption('verbose', sectionName, bool, False)

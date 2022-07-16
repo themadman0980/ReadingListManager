@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from readinglistmanager import filemanager,utilities
+from readinglistmanager import filemanager,utilities, config
 from readinglistmanager.datamanager import datasource, dataManager, dbManager
 from readinglistmanager.utilities import printResults
 from readinglistmanager.model.readinglist import ReadingList
@@ -34,12 +34,13 @@ def parseCBLfiles():
 
                 cblSource = datasource.Source(curFilename, curFilePath, datasource.ListSourceType.CBL)
 
-                readingList = ReadingList(source = cblSource, filePath = curFilePath)
+                readingList = ReadingList(source = cblSource)
 
                 i = 0
                 bookCount = len(cblBooks)
-                printResults("Updating issue data for reading list : %s [%s]" % (
-                    readingList.name, readingList.source.type.value), 3)
+                if config.Troubleshooting.verbose:
+                    printResults("Updating issue data for reading list : %s [%s]" % (
+                        readingList.name, readingList.source.type.value), 3)
 
                 for entry in cblBooks:
                     i += 1
@@ -121,7 +122,8 @@ def getOnlineLists():
                         curReadingList = ReadingList(source = curDBSource, listName = curListName)
 
                         # Get all reading list entries from readinglist DB table
-                        printResults("Getting issue details for %s" % (curReadingList.name), 3)
+                        if config.Troubleshooting.verbose:
+                            printResults("Getting issue details for %s" % (curReadingList.name), 3)
                         curListDetails = curDB.getListDetails(curDBListID)
 
                         count = len(curListDetails)

@@ -289,7 +289,7 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.ReadingLists
 
-        if not config.CV.check_story_arcs: return None
+        if not config.CV.check_arcs: return None
 
         try:
             results = _cvSession.story_arc_list(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
@@ -303,7 +303,7 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.ReadingList
 
-        if not config.CV.check_story_arcs: return None
+        if not config.CV.check_arcs: return None
 
         #try:
         if listID is not None:

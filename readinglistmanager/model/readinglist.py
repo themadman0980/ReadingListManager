@@ -5,7 +5,7 @@ from readinglistmanager.utilities import printResults
 import os, datetime, re
 from readinglistmanager.model.issue import Issue
 from readinglistmanager.model.series import Series
-from readinglistmanager.datamanager import datasource
+from readinglistmanager.datamanager.datasource import Source, ListSourceType
 from readinglistmanager import config, filemanager, utilities
 
 
@@ -71,7 +71,7 @@ class ReadingList:
         listData['Publisher'] = self.publisher
         listData['IssueCount'] = self.getNumIssues()
         #listData['Type'] = None
-        if isinstance(self.source, datasource.Source):
+        if isinstance(self.source, Source):
             listData['Source'] = self.source.name
 
         if utilities.isValidID(self.id):
@@ -105,27 +105,26 @@ class ReadingList:
         
         self.publisher = curPublisher
 
-    def __init__(self, source : datasource.Source, listName = None, listID = None, filePath = None):
+    def __init__(self, source : Source, listName = None, listID = None):
         try:
+            self.source = source
             self._name = None
             self.problems = dict()
             self.dynamicName = None
             self.publisher = None
             self.sourceIssueList = None
-            self.source = source
             self.id = listID
             self.part = None
             self.key = None
 
             if listName is not None:
                 self.name = listName
-            elif filePath is not None:
-                self.name = filePath
-            else:
-                if isinstance(source, datasource.Source):
-                    self.name = source.file
+            #elif filePath is not None:
+            #    self.name = filePath
+            elif isinstance(source, Source) and self.source.type == ListSourceType.CBL:
+                self._getNameFromFile(self.source.file)
 
-            if self.source is not None and isinstance(self.source, datasource.Source):
+            if self.source is not None and isinstance(self.source, Source):
                 self.key = ReadingList.getKey(self.dynamicName,self.source.type,self.source.name)
 
             self.dataSourceType = None
@@ -138,11 +137,11 @@ class ReadingList:
         return hash((self.dynamicName, self.source.type, self.source.name))
 
     @classmethod
-    def getKey(self, dynamicListName : str, listSourceType : datasource.ListSourceType, listSourceName : str = None):
+    def getKey(self, dynamicListName : str, listSourceType : ListSourceType, listSourceName : str = None):
         keyList = list()
         if dynamicListName is not None and isinstance(dynamicListName, str):
             keyList.append(dynamicListName)
-        if listSourceType is not None and isinstance(dynamicListName, datasource.ListSourceType):
+        if listSourceType is not None and isinstance(dynamicListName, ListSourceType):
             keyList.append(listSourceType.value)
         if listSourceName is not None and isinstance(listSourceName, str):
             keyList.append(listSourceName.replace(' ',''))
@@ -189,8 +188,8 @@ class ReadingList:
         self.problems[problemType] = extraData
 
     @classmethod
-    def fromDict(self, matchData : dict, listType : datasource.ListSourceType) -> 'ReadingList':
-        listSource = datasource.Source(matchData['name'], None, listType)
+    def fromDict(self, matchData : dict, listType : ListSourceType) -> 'ReadingList':
+        listSource = Source(matchData['name'], None, listType)
         curList = ReadingList(listName = matchData['name'], source = listSource, listID = matchData['listID'])
         curList.issueList = matchData['issues']
         curList.updateDetailsFromDict(matchData)
@@ -217,13 +216,10 @@ class ReadingList:
     def getNumIssues(self) -> int:
         return len(self.issueList) if self.issueList is not None else None
 
-    def _cleanName(self,fileString):
-        file = os.path.basename(fileString)
+    def _getNameFromFile(self, fileName):
+        file = os.path.basename(fileName)
         fileName, file_extension = os.path.splitext(file)
-        cleanName = utilities._cleanReadingListName(fileName) 
-        self._name = cleanName['listName']
-        if 'part' in cleanName:
-            self.part = cleanName['partNumber']
+        self.name = fileName
 
     def getFileName(self) -> str:
         fileName = list()
@@ -235,9 +231,9 @@ class ReadingList:
         if self.part is not None:
             fileName.append("Part #%s" % str(self.part))
 
-        if isinstance(self.source, datasource.Source) and isinstance(self.source.type, datasource.ListSourceType):
+        if isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
             sourceString = self.source.type.value
-            if self.source.type == datasource.ListSourceType.Website:
+            if self.source.type == ListSourceType.Website:
                 sourceString += '-%s' % self.source.name
             fileName.append("(%s)" % sourceString)
         
@@ -251,7 +247,12 @@ class ReadingList:
             return self._name
 
         def fset(self, value):
-            self._cleanName(value)
+            cleanName = utilities._cleanReadingListName(value)
+
+            self._name = cleanName['listName']
+            if 'part' in cleanName:
+                self.part = cleanName['partNumber']
+
             self.dynamicName = utilities.getDynamicName(self._name)
 
         def fdel(self):

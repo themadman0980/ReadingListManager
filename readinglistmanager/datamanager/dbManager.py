@@ -56,8 +56,8 @@ class DataDB(DB,ComicInformationSource):
         DB.__init__(self,databaseSource)
         ComicInformationSource.__init__(self)
         self.createTables()
-        if config.Troubleshooting.update_clean_names:
-            self.recreateCleanNames()
+        #if config.Troubleshooting.update_clean_names:
+        #    self.recreateCleanNames()
 
     def convertIssueResultsToDict(self, issueResults : list, resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
