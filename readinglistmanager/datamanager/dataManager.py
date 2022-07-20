@@ -11,7 +11,6 @@ from readinglistmanager.datamanager.datasource import ComicInformationSource, Da
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.issue import Issue
-import os
 
 dataDB = dbManager.DataDB.get()
 cv = cvManager.CV.get()

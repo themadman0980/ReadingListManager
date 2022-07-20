@@ -195,9 +195,9 @@ class CV(ComicInformationSource):
                             matches.append(match)
 
             # No matches from CV FILTER lookup
-            #if len(matches) == 0:
-            #    # Try resource search instead of filter
-            #    results = self.getSeriesFromNameSearch(name)
+            if len(matches) == 0:
+                # Try resource search instead of filter
+                results = self.getSeriesFromNameSearch(name)
 
         # Return *all* results for processing/filtering by dataManager
         return results
