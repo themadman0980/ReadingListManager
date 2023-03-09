@@ -3,11 +3,74 @@
 from abc import abstractmethod
 from readinglistmanager.utilities import printResults
 import os
+import requests
 from html import unescape
 from enum import Enum
 
 class DataSourceType(Enum):
     pass
+
+class Library():
+    class LibraryType(Enum):
+        Mylar = "Mylar"
+
+    def __init__(self, libraryType : LibraryType = None):
+        self.libraryType = libraryType
+
+    @property
+    @abstractmethod
+    def libraryType(self):
+        # Property that identifies the type of each Library child using LibraryType
+        pass
+
+    @property
+    @abstractmethod
+    def endpointURL(self):
+        # Property that identifies the URL location of each Library child
+        pass
+
+    @property
+    @abstractmethod
+    def apiKey(self):
+        # Property that identifies the type of each Library child using LibraryType
+        pass
+
+    @property
+    @abstractmethod
+    def instance(self):
+        # Property that identifies the single instance of each Library child
+        pass
+
+    @property
+    @abstractmethod
+    def get(self):
+        # Property that instantiates and returns the single instance of each Library child
+        pass
+
+    def queryAPI(library, cmd : str, params : dict) -> dict:
+
+        baseUrl = '%s/api?' % (library.endpointURL)
+
+        allParams = {            
+            'apikey':library.apiKey,
+            'cmd':cmd
+        }
+
+        allParams.update(params)
+
+        resp = requests.get(url=baseUrl, params=allParams)
+        data = resp.json() # Check the JSON Response Content documentation below
+
+        return data
+
+    @abstractmethod
+    def addSeriesToLibrary(self, seriesID : str) -> bool:
+        pass
+ 
+    @abstractmethod
+    def getSeriesDetails(self, seriesID : str) -> dict:
+        pass
+
 
 class ListSourceType(DataSourceType):
     Website = "WEB"

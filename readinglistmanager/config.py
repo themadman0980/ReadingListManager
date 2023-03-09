@@ -17,12 +17,17 @@ configDict = {
         'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Unknown"],
         'publisher_preferred': ["Marvel", "DC Comics"],
     },
+    'Mylar': {
+        'api_key' : 'API_KEY_HERE',
+        'endpoint' : 'http://localhost:8090',
+        'add_missing_series' : False
+    },
     'Export': {
-        'preserve_file_structure' : False
+        'preserve_file_structure' : False,
     },
     'Troubleshooting' : {
         'process_cbl': True,
-        'process_web_dl': True,
+        'process_web_dl': False,
         'verbose': False,
     }
 }
@@ -91,6 +96,20 @@ class CV():
     publisher_blacklist = getConfigOption('publisher_blacklist', sectionName, list, list())
     publisher_preferred = getConfigOption('publisher_preferred', sectionName, list, list())
 
+class Mylar():
+    sectionName = 'Mylar'
+
+    api_key = getConfigOption('api_key', sectionName, str, None)
+    if api_key is not None and api_key == 'API_KEY_HERE':
+        api_key = None
+
+    if api_key is not None:
+        add_missing_series = getConfigOption('add_missing_series', sectionName, bool, False)
+        endpoint = getConfigOption('endpoint', sectionName, str, "http://localhost:8090")
+    else:
+        #Turn off all Mylar functionality due to missing key
+        add_missing_series = False
+
 class Export():
     sectionName = 'Export'
 
@@ -98,6 +117,7 @@ class Export():
 
 class Troubleshooting():
     sectionName = 'Troubleshooting'
+
     process_cbl = getConfigOption('process_cbl', sectionName, bool, True)
-    process_web_dl = getConfigOption('process_web_dl', sectionName, bool, True)
+    process_web_dl = getConfigOption('process_web_dl', sectionName, bool, False)
     verbose = getConfigOption('verbose', sectionName, bool, False)

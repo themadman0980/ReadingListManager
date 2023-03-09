@@ -5,7 +5,7 @@ from readinglistmanager.utilities import printResults
 from readinglistmanager import config, filemanager
 #from readinglistmanager.model.series import Series
 #from readinglistmanager.model.issue import Issue
-from readinglistmanager.datamanager import dataManager, importer, datasource,save
+from readinglistmanager.datamanager import dataManager, mylarManager, importer, datasource,save
 from readinglistmanager.model.readinglist import ReadingList
 
 def main():
@@ -44,8 +44,14 @@ def main():
     #ReadingList.printSummaryResults(readingLists)
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()
+
+    if config.Mylar().add_missing_series:
+        printResults("Adding series to Mylar...", 1, True)
+        mylarManager.addSeriesToMylar(dataManager.getSeriesIDList())
+
     printResults("Writing data to files...", 1, True)
     dataManager.saveReadingLists()
+
     printResults("Saving problem data...", 1, True)
     problemdata.ProblemData.exportToFile()
 

@@ -692,3 +692,7 @@ def getReadingListSet():
                     readingListSet.add(readingList)
 
     return readingListSet
+
+def getSeriesIDList() -> list:
+    seriesList = set(series.id for series in _series.values())
+    return seriesList
