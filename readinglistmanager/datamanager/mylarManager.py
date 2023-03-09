@@ -38,4 +38,5 @@ mylar = Mylar.get()
 def addSeriesToMylar(seriesIDList : list):
     if config.Mylar.add_missing_series:
         for seriesID in seriesIDList:
-            mylar.addSeriesToLibrary(seriesID)
+            if seriesID is not None and isinstance(seriesID, str):
+                mylar.addSeriesToLibrary(seriesID)
