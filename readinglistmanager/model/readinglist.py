@@ -46,6 +46,8 @@ class ReadingList:
                     issueYear = issue.coverDate.year
                 else:
                     issueYear = issue.year
+                
+                if issueYear is None : issueYear = '' 
 
                 seriesName = utilities.escapeString(issue.series.name)
                 issueNum = utilities.escapeString(issue.issueNumber)
