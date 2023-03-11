@@ -3,7 +3,7 @@
 
 from readinglistmanager.utilities import printResults
 import os
-import datetime
+from datetime import datetime
 import re
 from readinglistmanager.model.issue import Issue
 from readinglistmanager.model.series import Series
@@ -33,7 +33,8 @@ class ReadingList:
         lines.append("<Name>%s</Name>" % (self.name))
         if self.getNumIssues() is not None:
             lines.append("<NumIssues>%s</NumIssues>" % (self.getNumIssues()))
-        lines.append("<Source>%s</Source>" % (self.source.name))
+        lines.append("<Source>%s</Source>" % (self.getSourceName()))
+        lines.append("<StartYear>%s</StartYear>" % (self.startYear))
         if self.id is not None and utilities.isValidID(self.id):
             lines.append("<Database Name=\"cv\" ID=\"%s\" />" % (self.id))
         lines.append("<Books>")
@@ -42,7 +43,7 @@ class ReadingList:
         for key, issue in sorted(self.issueList.items()):
             if isinstance(issue, Issue):
                 # Check if issue cover date exists
-                if issue.coverDate is not None and isinstance(issue.coverDate, datetime.datetime):
+                if issue.coverDate is not None and isinstance(issue.coverDate, datetime):
                     issueYear = issue.coverDate.year
                 else:
                     issueYear = issue.year
@@ -77,10 +78,10 @@ class ReadingList:
 
         listData['ListName'] = self.name
         listData['Publisher'] = self.publisher
+        listData['StartYear'] = self.startYear
         listData['IssueCount'] = self.getNumIssues()
         #listData['Type'] = None
-        if isinstance(self.source, Source):
-            listData['Source'] = self.source.name
+        listData['Source'] = self.getSourceName()
 
         if utilities.isValidID(self.id):
             listData['Database'] = list()
@@ -93,6 +94,70 @@ class ReadingList:
                 listData['Issues'][str(number)] = issue.getJSONDict()
 
         return listData
+
+    def setStartYearFromIssueDetails(self):
+        yearCounts = dict()
+        issueCount = len(self.issueList)
+
+        if self.issueList is not None and issueCount > 0:
+            for number, issue in self.issueList.items():
+                if isinstance(issue, Issue) and issue.year is not None:
+                    try:
+                        curIssueYear = int(issue.year)
+                    except:
+                        continue
+
+                    if curIssueYear < 1900 or curIssueYear > 2030:
+                        continue
+
+                    if curIssueYear not in yearCounts:
+                        yearCounts[curIssueYear] = 0
+
+                    yearCounts[curIssueYear] += 1
+
+        # Get a sorted list of the years
+        listYears = sorted(yearCounts)
+
+        curStartYear = listYears[0]
+        curCount = yearCounts[curStartYear]
+
+        n = 1
+
+        #TODO: Improve logic
+        if len(listYears) > 1 :
+            while(n < len(listYears)):
+                # The prev year is detached from current one!
+                if (listYears[n] - listYears[n-1] >= 2 and 
+                    yearCounts[listYears[n-1]] <= 2 and 
+                    yearCounts[listYears[n-1]] / issueCount * 100 < 20):
+                    # If prev year:
+                    #   1. Was 2+ years before next issue
+                    #   2. Had only 1 issue 
+                    #   3. Composes less than 20% off total issue count
+                    # set curStartYear to next year in list
+                    curStartYear = listYears[n]
+                    curCount = yearCounts[curStartYear]
+                else:
+                    # Exit with initial year
+                    break
+                
+                n += 1
+
+        #for year, count in sorted(yearCounts.items()):
+        #    if curCount == 0:
+        #        # First iteration : set starting values
+        #        curStartYear = year
+        #        curCount = count
+        #        continue
+        #    elif year - curStartYear >= 2 :
+        #        if curCount <= 2 
+        #            if count > 1:
+        #                curStartYear = year
+        #                curCount = count
+        #            else:
+        #                continue
+        #
+        self.startYear = curStartYear
 
     def setPublisherFromIssueDetails(self):
 
@@ -118,8 +183,10 @@ class ReadingList:
         try:
             self.source = source
             self._name = None
+            self._sourceNameOverride = None
             self.problems = dict()
             self.dynamicName = None
+            self.startYear = None
             self.publisher = None
             self.sourceIssueList = None
             self.id = listID
@@ -157,6 +224,14 @@ class ReadingList:
         if listSourceName is not None and isinstance(listSourceName, str):
             keyList.append(listSourceName.replace(' ', ''))
         return "-".join(keyList)
+
+    def getSourceName(self):
+        if self._sourceNameOverride is not None:
+            return self._sourceNameOverride
+        elif isinstance(self.source, Source):                
+            return self.source.name
+        else:
+            return "Unknown"
 
     def getSummary(self) -> dict:
         issuesMatched = seriesMatched = 0
@@ -216,6 +291,7 @@ class ReadingList:
             #self.startYear = match['startYear']
             self.publisher = match['publisher']
             self.dateAdded = match['dateAdded']
+            self.startYear = match['startYear']
             self.dataSourceType = match['dataSource']
             # self.numIssues = match['numIssues'] Calculated dynamically from self.issueList
             self.sourceIssueList = match['issues']
@@ -240,12 +316,20 @@ class ReadingList:
         if self.publisher is not None:
             fileName.append("[%s]" % self.publisher)
 
-        fileName.append(str(self.name))
+        if self.startYear is not None:
+            fileName.append("(%s)" % self.startYear)
+
+        fileName.append("%s" % (str(self.name)))
 
         if self.part is not None:
             fileName.append("Part #%s" % str(self.part))
 
-        if isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
+        sourceName = self.getSourceName()
+        if self._sourceNameOverride is not None:
+            # String override in effect for WEB source
+            sourceString = "WEB-%s" % (sourceName)
+            fileName.append("(%s)" % sourceString)
+        elif isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
             sourceString = self.source.type.value
             if self.source.type == ListSourceType.Website:
                 sourceString += '-%s' % self.source.name
@@ -272,6 +356,11 @@ class ReadingList:
                     self.part = cleanName['partNumber']
 
             self._name = cleanName['listName']
+
+            #Update source type from CBL to WEB if filename indicates WEB source
+            if self.source.type == ListSourceType.CBL and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
+                newSourceName = utilities._getWebSourceName(cleanName['source'])
+                self._sourceNameOverride = newSourceName
 
             self.dynamicName = utilities.getDynamicName(self._name)
 

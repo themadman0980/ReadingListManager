@@ -175,10 +175,29 @@ def writeProblemData(string):
         file.write("\n%s" % (string))
         file.flush()
 
+def _isWebSource(sourceName : str) -> bool:
+    pattern = r'(WEB)?-?([A-Za-z0-9]+)?'
+
+    match = re.search(pattern, sourceName, re.IGNORECASE)
+
+    return True if match.group(1) == "WEB" else False     
+
+def _getWebSourceName(sourceName : str) -> str:
+    pattern = r'(?P<webSourceIdentifier>WEB)?-?(?P<sourceName>[A-Za-z0-9]+)'
+
+    match = re.search(pattern, sourceName, re.IGNORECASE)
+    match = match.groupdict()
+
+    if 'webSourceIdentifier' in match: 
+        return match['sourceName']
+    else: 
+        return None
+
 
 def _cleanReadingListName(listName: str) -> dict:
     patterns = [
         r'(?P<partNumber>\d+)? *(?P<listName>.*?[^()]) *\(?(?P<listYears>\d+(?:-\d+)?)\)?$',
+        r'(?:\[(?P<publisher>[A-Za-z ]+)\])? *(?:\(?(?P<startYear>\d{4})\))? *(?P<listName>[^()]+) *(?:\((?P<source>[A-Za-z0-9\-]*)\))?$',
         r'(?P<publisher>Marvel|DC) Events?: *(?P<listName>.*)$'
     ]
 
