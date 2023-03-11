@@ -3,6 +3,8 @@
 from readinglistmanager.utilities import printResults
 from readinglistmanager import utilities
 from enum import Enum
+from datetime import datetime
+
 
 class Issue:
 
@@ -58,18 +60,31 @@ class Issue:
         try:
             self.id = match['issueID']
             self.name = match['name']
-            self.coverDate = match['coverDate']
+            self.setCoverDate(match['coverDate'])
             self.description = match['description']
             self.summary = match['summary']
             self.issueType = match['issueType']
             self.sourceType = match['dataSource']
             self.detailsFound = True
-        except:
+        except Exception as e:
             if self.series is not None: 
                 printResults("Error: Unable to update issue \'%s (%s) #%s [%s]\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, self.id, match),4)
+                printResults("Exception: %s" % (e),4)
             else:
                 printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.id, match),4)
+                printResults("Exception: %s" % (e),4)
 
+    def setCoverDate(self, coverDate : datetime):
+        if isinstance(coverDate, datetime):
+            self.coverDate = coverDate
+        elif isinstance(coverDate, str):
+            try:
+                self.coverDate = utilities.getDateFromString(coverDate)
+            except:
+                pass
+
+        if isinstance(self.coverDate, datetime):
+            self.year = self.coverDate.year
 
     def coverDateString():
         doc = "The issue's coverdate in String format"

@@ -56,7 +56,8 @@ class Library():
             'cmd':cmd
         }
 
-        allParams.update(params)
+        if params is not None and isinstance(params, dict):
+            allParams.update(params)
 
         resp = requests.get(url=baseUrl, params=allParams)
         data = resp.json() # Check the JSON Response Content documentation below

@@ -68,10 +68,6 @@ class DataDB(DB,ComicInformationSource):
                 curResult = ComicInformationSource._issueDetailsTemplate.copy()
                 issueID,seriesID,name,coverDate,issueNum,description,summary = result
                 issueType = ComicInformationSource._getIssueType(name, description, summary)
-                try: 
-                    coverDate = utilities.getDateFromString(coverDate)
-                except: 
-                    printResults("Error: Unable to process cover date \"%s\"" % (coverDate,), 4)
                 curResult.update({
                     'issueID':issueID, 
                     'seriesID':seriesID, 
@@ -264,7 +260,7 @@ class DataDB(DB,ComicInformationSource):
             # Match already exists!
             if config.verbose: print("Issue #%s [%s] from series [%s] already exists in the DB!" % (issueDetails['issueNum'], issueDetails['issueID'], issueDetails['seriesID']))
         elif utilities.isValidID(issueDetails['issueID']) and issueDetails['issueNum'] is not None:
-            if isinstance(issueDetails['coverDate'],datetime.date):
+            if isinstance(issueDetails['coverDate'],datetime):
                 coverDate = utilities.getStringFromDate(issueDetails['coverDate'])
             else:
                 coverDate = issueDetails['coverDate']

@@ -132,6 +132,7 @@ def validateReadingLists(readingLists : list[ReadingList]) -> None:
     if isinstance(readingLists, list):
         for readingList in readingLists:
             if isinstance(readingList, ReadingList):
+                readingList.setStartYearFromIssueDetails()
                 readingList.setPublisherFromIssueDetails()
 
     numLists = len(readingLists)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from readinglistmanager.datamanager.datasource import Library 
-from readinglistmanager.utilities import printResults
+from readinglistmanager.utilities import printResults, isValidID
 from readinglistmanager import config
 
 class Mylar(Library):
@@ -32,11 +32,36 @@ class Mylar(Library):
         apiResults = Library.queryAPI(self, 'getComic', params)
 
         return apiResults
+
+    def getSeriesList(self) -> dict:
+        apiResults = Library.queryAPI(self, 'getIndex', None)
+
+        return apiResults
+
+    def getSeriesIDList(self) -> set:
+        apiResults = self.getSeriesList()
+
+        seriesList = set()
+
+        if 'data' in apiResults:
+            for series in apiResults['data']:
+                if 'id' in series and isValidID(series['id']):
+                    try:
+                        seriesList.add(int(series['id']))
+                    except:
+                        printResults("Unable to process series id: %s" % (series['id']),2)
+
+        return seriesList
+
+
     
 mylar = Mylar.get()
 
 def addSeriesToMylar(seriesIDList : list):
+
+    existingSeriesList = mylar.getSeriesIDList()
+
     if config.Mylar.add_missing_series:
         for seriesID in seriesIDList:
-            if seriesID is not None:
+            if (seriesID is not None) and (seriesID not in existingSeriesList):
                 mylar.addSeriesToLibrary(seriesID)
