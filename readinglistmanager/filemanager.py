@@ -21,6 +21,7 @@ overridesFile = os.path.join(dataDirectory,'SeriesOverrides.json')
 configFile = os.path.join(rootDirectory, 'config.ini')
 resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (_timeString))
 problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (_timeString))
+seriesFile = os.path.join(resultsDirectory, "series-%s.txt" % (_timeString))
 
 def checkDirectories():
 

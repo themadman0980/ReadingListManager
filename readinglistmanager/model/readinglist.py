@@ -368,3 +368,41 @@ class ReadingList:
             del self._name
         return locals()
     name = property(**name())
+
+    def title():
+        doc = "The reading list title (including start year)"
+
+        def fget(self):
+            return "%s (%s)" % (self.name,self.startYear)
+
+        return locals()
+
+    title = property(**title())
+
+    def getSeriesSummary(readingLists : list) -> list:
+        
+        textLines = ["Summary of Reading List Series"]
+
+        for curReadingList in readingLists:
+            if isinstance(curReadingList, ReadingList):
+                textLines.append("\n%s" % curReadingList.title)
+                seriesList = dict()
+
+                for listIssueNum, issue in curReadingList.issueList.items():
+                    if isinstance(issue, Issue):
+                        seriesTitle = issue.series.title
+                        if seriesTitle not in seriesList:
+                            seriesList[seriesTitle] = []
+
+                        seriesList[seriesTitle].append(issue.issueNumber)
+                
+                for series, issues in seriesList.items():
+                    if isinstance(issues, list):
+                        # Try to group
+                        curIssueList = utilities.simplifyListOfNumbers(issues)
+
+                        textLines.append("%s : %s" % (series,", ".join(curIssueList)))
+        
+        return textLines
+
+

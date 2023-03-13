@@ -72,7 +72,7 @@ def saveReadingLists(readingLists: list[ReadingList], outputFileType: OutputFile
                 saveReadingList(readingList, outputFileType)
 
 
-def saveDataListToTXT(fileName: str, listData: list) -> None:
+def saveDataListToTXT(fileName: str, listData: list, isCompleteFilePath=False) -> None:
     outputFileType = OutputFileType.TXT
     if not isinstance(listData, list):
         if isinstance(listData, set) or isinstance(listData, tuple):
@@ -80,10 +80,14 @@ def saveDataListToTXT(fileName: str, listData: list) -> None:
         elif isinstance(listData, dict):
             listData = list(listData.values())
 
-    fileName = fileName + outputFileType.getExtension()
-    file = os.path.join(outputFileType.getDirectory(), fileName)
+    if isCompleteFilePath:
+        file = fileName
+    else:
+        fileName = fileName + outputFileType.getExtension()
+        file = os.path.join(outputFileType.getDirectory(), fileName)
 
-    if isinstance(listData, list) and isinstance(file, str):
+
+    if isinstance(listData, list) and isinstance(fileName, str):
         with open(file, mode='w') as outputFile:
             for line in listData:
                 outputFile.write(f"{line}\n")

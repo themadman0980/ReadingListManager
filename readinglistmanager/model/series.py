@@ -157,6 +157,16 @@ class Series:
         return locals()
     name = property(**name())
 
+    def title():
+        doc = "The series title (including start year)"
+
+        def fget(self):
+            return "%s (%s)" % (self.name,self.startYear)
+
+        return locals()
+
+    title = property(**title())
+
     @classmethod
     def fromDict(self, match : dict):
         newSeries = Series(match['name'],match['startYear'])

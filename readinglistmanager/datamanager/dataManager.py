@@ -697,3 +697,9 @@ def getReadingListSet():
 def getSeriesIDList() -> list:
     seriesList = set(series.id for series in _series.values())
     return seriesList
+
+def saveSeriesSummary(readingLists : list):
+    if isinstance(readingLists, list):
+        stringData = ReadingList.getSeriesSummary(readingLists)
+
+        save.saveDataListToTXT(filemanager.seriesFile, stringData, True)

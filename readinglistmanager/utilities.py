@@ -271,3 +271,52 @@ def cleanFileName(orig_name: str):
         fixed_name = fixed_name.replace(a, b)
 
     return fixed_name
+
+def simplifyListOfNumbers(listNumbers : list) -> list:
+    # Intended to organise and simplify issue numbers into concatenated groups where possible
+
+    outputList = []
+    intList = set()
+
+    if isinstance(listNumbers, list) and len(listNumbers) > 1:
+        for listNum in listNumbers:
+            if isinstance(listNum,str) and listNum.isdigit():
+                intList.add(int(listNum))
+            else:
+                outputList.append(listNum)
+    
+        curStartingInt = None
+        prevInt = None
+        sortedInts = list(sorted(intList))
+
+        for intNum in sortedInts:
+            if curStartingInt == None:
+                # Starting a new consecutive number trail
+                curStartingInt = intNum
+            elif intNum == prevInt + 1:
+                # Current int is next consecutive number
+                pass
+            else:
+                # End a new consecutive number trail
+                outputList.append("%s-%s" % (curStartingInt,prevInt))
+
+                #Reset number trail
+                curStartingInt = None
+
+            prevInt = intNum
+
+            #Catch cases where all items in a list are consecutive
+            
+            if isinstance(curStartingInt,int) and (prevInt - curStartingInt == len(sortedInts) - 1):
+                outputList.append("%s-%s" % (curStartingInt,prevInt))
+            
+    else: 
+        outputList = listNumbers
+    
+    return outputList
+
+
+
+
+
+
