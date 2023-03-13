@@ -385,7 +385,7 @@ class ReadingList:
 
         for curReadingList in readingLists:
             if isinstance(curReadingList, ReadingList):
-                textLines.append("\n%s" % curReadingList.title)
+                textLines.append("\n%s\n-" % curReadingList.title)
                 seriesList = dict()
 
                 for listIssueNum, issue in curReadingList.issueList.items():
@@ -394,14 +394,31 @@ class ReadingList:
                         if seriesTitle not in seriesList:
                             seriesList[seriesTitle] = []
 
-                        seriesList[seriesTitle].append(issue.issueNumber)
+                        seriesList[seriesTitle].append(issue)
                 
                 for series, issues in seriesList.items():
                     if isinstance(issues, list):
-                        # Try to group
-                        curIssueList = utilities.simplifyListOfNumbers(issues)
+                        issueNumList = []
+                        seriesLength = None
 
-                        textLines.append("%s : %s" % (series,", ".join(curIssueList)))
+                        for issue in issues:
+                            if isinstance(issue, Issue): 
+                                issueNumList.append(issue.issueNumber)
+                                if seriesLength is None and isinstance(issue.series, Series):
+                                    seriesLength = issue.series.numIssues
+
+                        # Try to group
+                        curIssueList = utilities.simplifyListOfNumbers(issueNumList)
+
+
+                        if seriesLength is None:
+                            completeStatus = "Unknown"
+                        elif len(issues) == seriesLength:
+                            completeStatus = "Complete"
+                        else:
+                            completeStatus = "Incomplete"
+
+                        textLines.append("%s : %s [%s]" % (series,", ".join(curIssueList),completeStatus))
         
         return textLines
 
