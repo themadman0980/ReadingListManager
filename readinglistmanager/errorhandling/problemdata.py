@@ -72,7 +72,7 @@ class ProblemData():
                         issueList = []
                         for issue in entry.issueList.values():
                             issueYear = None
-                            if isinstance(issue.coverDate,datetime): 
+                            if issue.coverDate is not None and isinstance(issue.coverDate,datetime): 
                                 issueYear = issue.coverDate.year
                             else:
                                 issueYear = issue.year
