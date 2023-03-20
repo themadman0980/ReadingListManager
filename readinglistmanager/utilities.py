@@ -316,7 +316,16 @@ def simplifyListOfNumbers(listNumbers : list) -> list:
     return outputList
 
 
+def confirmMylarImports() -> bool:
+    yes = {'yes','y', 'ye'}
+    no = {'no','n'}
 
+    printResults("WARNING: Mylar imports are enabled! [Enter y to proceed]")
+    choice = input().lower()
+    if choice in yes:
+        return True
+    else:
+        return False
 
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from readinglistmanager.errorhandling import problemdata
-from readinglistmanager.utilities import printResults
+from readinglistmanager.utilities import printResults, confirmMylarImports
 from readinglistmanager import config, filemanager
 #from readinglistmanager.model.series import Series
 #from readinglistmanager.model.issue import Issue
@@ -9,6 +9,10 @@ from readinglistmanager.datamanager import dataManager, mylarManager, importer, 
 from readinglistmanager.model.readinglist import ReadingList
 
 def main():
+
+    # Confirm with user before proceeding if add to mylar is enabled
+    if config.Mylar().add_missing_series and not confirmMylarImports():
+        return
     
     printResults("Reading data from sources...", 1, True)
     readingLists = []
