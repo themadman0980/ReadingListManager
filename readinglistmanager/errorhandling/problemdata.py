@@ -1,6 +1,6 @@
 from readinglistmanager import utilities
 from enum import Enum
-import datetime
+from datetime import datetime
 
 class ProblemData():
 

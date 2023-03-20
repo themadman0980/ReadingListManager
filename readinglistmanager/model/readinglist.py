@@ -115,49 +115,50 @@ class ReadingList:
 
                     yearCounts[curIssueYear] += 1
 
-        # Get a sorted list of the years
-        listYears = sorted(yearCounts)
+        if len(yearCounts) > 0:
+            # Get a sorted list of the years
+            listYears = sorted(yearCounts)
 
-        curStartYear = listYears[0]
-        curCount = yearCounts[curStartYear]
+            curStartYear = listYears[0]
+            curCount = yearCounts[curStartYear]
 
-        n = 1
+            n = 1
 
-        #TODO: Improve logic
-        if len(listYears) > 1 :
-            while(n < len(listYears)):
-                # The prev year is detached from current one!
-                if (listYears[n] - listYears[n-1] >= 2 and 
-                    yearCounts[listYears[n-1]] <= 2 and 
-                    yearCounts[listYears[n-1]] / issueCount * 100 < 20):
-                    # If prev year:
-                    #   1. Was 2+ years before next issue
-                    #   2. Had only 1 issue 
-                    #   3. Composes less than 20% off total issue count
-                    # set curStartYear to next year in list
-                    curStartYear = listYears[n]
-                    curCount = yearCounts[curStartYear]
-                else:
-                    # Exit with initial year
-                    break
-                
-                n += 1
+            #TODO: Improve logic
+            if len(listYears) > 1 :
+                while(n < len(listYears)):
+                    # The prev year is detached from current one!
+                    if (listYears[n] - listYears[n-1] >= 2 and 
+                        yearCounts[listYears[n-1]] <= 2 and 
+                        yearCounts[listYears[n-1]] / issueCount * 100 < 20):
+                        # If prev year:
+                        #   1. Was 2+ years before next issue
+                        #   2. Had only 1 issue 
+                        #   3. Composes less than 20% off total issue count
+                        # set curStartYear to next year in list
+                        curStartYear = listYears[n]
+                        curCount = yearCounts[curStartYear]
+                    else:
+                        # Exit with initial year
+                        break
+                    
+                    n += 1
 
-        #for year, count in sorted(yearCounts.items()):
-        #    if curCount == 0:
-        #        # First iteration : set starting values
-        #        curStartYear = year
-        #        curCount = count
-        #        continue
-        #    elif year - curStartYear >= 2 :
-        #        if curCount <= 2 
-        #            if count > 1:
-        #                curStartYear = year
-        #                curCount = count
-        #            else:
-        #                continue
-        #
-        self.startYear = curStartYear
+            #for year, count in sorted(yearCounts.items()):
+            #    if curCount == 0:
+            #        # First iteration : set starting values
+            #        curStartYear = year
+            #        curCount = count
+            #        continue
+            #    elif year - curStartYear >= 2 :
+            #        if curCount <= 2 
+            #            if count > 1:
+            #                curStartYear = year
+            #                curCount = count
+            #            else:
+            #                continue
+            #
+            self.startYear = curStartYear
 
     def setPublisherFromIssueDetails(self):
 

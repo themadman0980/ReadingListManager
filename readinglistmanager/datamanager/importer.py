@@ -109,7 +109,7 @@ def getOnlineLists():
         for file in files:
             if file.endswith(".db"):
                 # TODO : Re-enable cbro.db
-                if not (file == "cv.db" or file == "data.db"):
+                if not (file == "cv.db" or file == "data.db" or file =="overrides.db"):
                     #try:
                     # Create Source object
                     filePath = os.path.join(root, file)
