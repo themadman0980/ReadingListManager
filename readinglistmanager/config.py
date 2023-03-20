@@ -14,7 +14,7 @@ configDict = {
         'check_series': True,
         'check_issues': True,
         'api_key': 'API_KEY_HERE',
-        'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Unknown"],
+        'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Abril", "Ediciones Zinco", "Dino Comics", "Unknown"],
         'publisher_preferred': ["Marvel", "DC Comics"],
     },
     'Mylar': {
