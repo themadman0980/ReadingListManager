@@ -260,7 +260,7 @@ class DataDB(DB,ComicInformationSource):
             # Match already exists!
             if config.verbose: print("Issue #%s [%s] from series [%s] already exists in the DB!" % (issueDetails['issueNum'], issueDetails['issueID'], issueDetails['seriesID']))
         elif utilities.isValidID(issueDetails['issueID']) and issueDetails['issueNum'] is not None:
-            if isinstance(issueDetails['coverDate'],datetime):
+            if isinstance(issueDetails['coverDate'],datetime.datetime):
                 coverDate = utilities.getStringFromDate(issueDetails['coverDate'])
             else:
                 coverDate = issueDetails['coverDate']
@@ -305,7 +305,7 @@ class ListDB(DB):
 
     def getIssueDetails(self, issueID):
         cursor = self.connection.cursor()
-        entryQuery = ''' SELECT hrnum, series, start_year, issue, story FROM %s WHERE hrnum=?; ''' % (
+        entryQuery = ''' SELECT hrnum, series, start_year, issue, story, pubdate FROM %s WHERE hrnum=?; ''' % (
             self.source.tableIssueDetails, )
         entryParam = (issueID, )
         entryMatches = cursor.execute(entryQuery, entryParam).fetchall()

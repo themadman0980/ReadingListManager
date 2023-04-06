@@ -5,12 +5,12 @@ import unicodedata  # Needed to strip character accents
 import re
 import os
 import string
-from datetime import datetime
+from datetime import datetime, date
 from readinglistmanager import filemanager
 
 resultsFile = filemanager.resultsFile
 problemsFile = filemanager.problemsFile
-dateFormat = '%Y-%m-%d'
+dateFormats = ['%Y-%m-%d','%Y-%MM', '%Y']
 dynamicNameTemplate = '[^a-zA-Z0-9]'
 stop_words = ['the', 'a', 'and']
 yearStringCleanTemplate = '[^0-9]'
@@ -22,23 +22,40 @@ def getCurrentTimeStamp():
 
 
 def getTodaysDate():
-    return datetime.today().strftime(dateFormat)
+    return datetime.today().strftime(dateFormats[0])
 
 
 def getStringFromDate(dateObject):
-    if dateObject is not None:
+    if dateObject is not None and isinstance(dateObject, date):
         try:
-            return datetime.strftime(dateObject, dateFormat)
+            return datetime.strftime(dateObject, dateFormats[0])
         except Exception as e:
-            return
+            pass
 
+    return
 
-def getDateFromString(dateString):
+def getDateFromStringFormats(dateString : str, stringFormats: list):
+    if None not in [dateString, stringFormats]:
+        matchDate = None
+        for dateFormat in stringFormats:
+            try:
+                matchDate = datetime.strptime(dateString, dateFormat)
+                return matchDate
+            except ValueError as e:
+                pass
+            except Exception as e:
+                pass
+            
+
+def getDateFromString(dateString : str):
     if dateString is not None:
-        try:
-            return datetime.strptime(dateString, dateFormat)
-        except Exception as e:
-            return
+        for dateFormat in dateFormats:
+            try:
+                return datetime.strptime(dateString, dateFormat)
+            except ValueError as e:
+                pass
+            except Exception as e:
+                pass
 
 
 def escapeString(string):
@@ -288,32 +305,42 @@ def simplifyListOfNumbers(listNumbers : list) -> list:
         curStartingInt = None
         prevInt = None
         sortedInts = list(sorted(intList))
-
-        for intNum in sortedInts:
+        
+        endOfCurRange = False
+        endOfList = False
+        
+        i = 0
+        for i in range(len(sortedInts)):
             if curStartingInt == None:
                 # Starting a new consecutive number trail
-                curStartingInt = intNum
-            elif intNum == prevInt + 1:
+                curStartingInt = sortedInts[i]
+            elif sortedInts[i] == prevInt + 1:
                 # Current int is next consecutive number
                 pass
             else:
+                endOfCurRange = True
+            
+            if i == len(sortedInts) - 1:
+                endOfList = True
+            
+            if endOfCurRange or endOfList:
                 # End a new consecutive number trail
-                outputList.append("%s-%s" % (curStartingInt,prevInt))
+                if curStartingInt != prevInt:
+                    outputList.append("%s-%s" % (curStartingInt,prevInt))
+                else:
+                    outputList.append("%s" % (sortedInts[i]))
 
                 #Reset number trail
-                curStartingInt = None
-
-            prevInt = intNum
-
-            #Catch cases where all items in a list are consecutive
+                curStartingInt = sortedInts[i]
+                endOfCurRange = False
             
-            if isinstance(curStartingInt,int) and (prevInt - curStartingInt == len(sortedInts) - 1):
-                outputList.append("%s-%s" % (curStartingInt,prevInt))
-            
+
+            prevInt = sortedInts[i]
+
     else: 
         outputList = listNumbers
     
-    return outputList
+    return sorted(outputList)
 
 
 def confirmMylarImports() -> bool:

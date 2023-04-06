@@ -3,7 +3,7 @@
 from readinglistmanager.utilities import printResults
 from readinglistmanager import utilities
 from enum import Enum
-from datetime import datetime
+from readinglistmanager.model.date import PublicationDate
 
 
 class Issue:
@@ -16,6 +16,7 @@ class Issue:
         self.id = None
         self.year = None
         self.name = None
+        self.sourceDate = None
         self.coverDate = None
         self.description = None
         self.summary = None
@@ -74,24 +75,43 @@ class Issue:
                 printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.id, match),4)
                 printResults("Exception: %s" % (e),4)
 
-    def setCoverDate(self, coverDate : datetime):
-        if isinstance(coverDate, datetime):
-            self.coverDate = coverDate
-        elif isinstance(coverDate, str):
+    def setSourceDate(self, issueDate : PublicationDate):
+        if isinstance(issueDate, PublicationDate):
+            self.sourceDate = issueDate
+        else:
             try:
-                self.coverDate = utilities.getDateFromString(coverDate)
-            except:
+                self.sourceDate = PublicationDate(issueDate)
+            except Exception as e:
                 pass
 
-        if isinstance(self.coverDate, datetime):
+    def setCoverDate(self, coverDate : PublicationDate):
+        if isinstance(coverDate, PublicationDate):
+            self.coverDate = coverDate
+        else:
+            try:
+                self.coverDate = PublicationDate(coverDate)
+            except Exception as e:
+                pass
+
+        if isinstance(self.coverDate, PublicationDate):
             self.year = self.coverDate.year
+
+    def getYear(self):
+        if self.coverDate is not None and isinstance(self.coverDate, PublicationDate):
+            return self.coverDate.year
+        if self.sourceDate is not None and isinstance(self.sourceDate, PublicationDate):
+            return self.sourceDate.year
+
+        return None
 
     def coverDateString():
         doc = "The issue's coverdate in String format"
 
         def fget(self):
+            if self.coverDate is not None and isinstance(self.coverDate, PublicationDate):
+                return self.coverDate.getString()
 
-            return utilities.getStringFromDate(self.coverDate)
+            return ""
         return locals()
     coverDateString = property(**coverDateString())
 

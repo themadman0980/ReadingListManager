@@ -5,6 +5,7 @@ from html import unescape
 from readinglistmanager import config,filemanager,utilities
 #from readinglistmanager.datamanager import dataManager
 from readinglistmanager.utilities import printResults
+from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.datamanager.datasource import ComicInformationSource
 import simyan.schemas.volume, simyan.schemas.issue, simyan.schemas.story_arc, simyan.comicvine
 from simyan.sqlite_cache import SQLiteCache
@@ -25,19 +26,19 @@ class CV(ComicInformationSource):
 
         return CV.instance
 
-    def convertIssueResultsToDict(self, issueResults : list[simyan.schemas.issue.Issue], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertIssueResultsToDict(self, issueResults : list[simyan.schemas.issue.IssueEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(issueResults, simyan.schemas.issue.Issue):
+        if isinstance(issueResults, simyan.schemas.issue.IssueEntry):
             # Single result found
             result = issueResults
             issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
             issueType = ComicInformationSource._getIssueType(result.name, result.description,result.summary)
             issueDetails.update({
-                'issueID' : result.id_, 
+                'issueID' : result.issue_id, 
                 'name' : result.name, 
-                'coverDate' : result.cover_date, 
+                'coverDate' : PublicationDate.fromDateTimeObj(result.cover_date), 
                 'issueNum': str(result.number), 
                 'issueType' : issueType, 
                 'description' : result.description, 
@@ -47,7 +48,7 @@ class CV(ComicInformationSource):
             results.append(issueDetails)
         elif isinstance(issueResults, list):
             for result in issueResults:
-                if isinstance(result, simyan.schemas.issue.Issue):
+                if isinstance(result, simyan.schemas.issue.IssueEntry):
                     issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
                     issueType = ComicInformationSource._getIssueType(result.name,result.description,result.summary)
                     seriesID = None
@@ -56,7 +57,7 @@ class CV(ComicInformationSource):
                         'issueID' : result.issue_id, 
                         'seriesID':seriesID,
                         'name' : result.name, 
-                        'coverDate' : result.cover_date, 
+                        'coverDate' : PublicationDate.fromDateTimeObj(result.cover_date), 
                         'issueNum': str(result.number), 
                         'issueType' : issueType, 
                         'description' : result.description, 
@@ -75,20 +76,20 @@ class CV(ComicInformationSource):
         return results
 
 
-    def convertSeriesResultsToDict(self, volumeResults : list[simyan.schemas.volume.Volume], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertSeriesResultsToDict(self, volumeResults : list[simyan.schemas.volume.VolumeEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(volumeResults, simyan.schemas.volume.Volume):
+        if isinstance(volumeResults, simyan.schemas.volume.VolumeEntry):
             # Single result found
             result = volumeResults
             seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
             publisher = None
             publisher = result.publisher.name if result.publisher is not None else None
             seriesDetails.update({
-                'seriesID': result.id_, 
+                'seriesID': result.volume_id, 
                 'name' : result.name, 
-                'startYear' : result.start_year, 
+                'startYear' : PublicationDate(result.start_year), 
                 'publisher' : publisher, 
                 'numIssues' : result.issue_count, 
                 'description' : result.description, 
@@ -98,13 +99,13 @@ class CV(ComicInformationSource):
             results.append(seriesDetails)
         elif isinstance(volumeResults, list):
             for result in volumeResults:
-                if isinstance(result, simyan.schemas.volume.Volume):
+                if isinstance(result, simyan.schemas.volume.VolumeEntry):
                     seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
                     publisher = result.publisher.name if result.publisher is not None else None
                     seriesDetails.update({
-                        'seriesID': result.id_, 
+                        'seriesID': result.volume_id, 
                         'name' : result.name, 
-                        'startYear' : result.start_year, 
+                        'startYear' : PublicationDate(result.start_year), 
                         'publisher' : publisher, 
                         'numIssues' : result.issue_count, 
                         'description' : result.description, 

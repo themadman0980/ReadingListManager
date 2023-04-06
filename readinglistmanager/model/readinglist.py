@@ -7,6 +7,7 @@ from datetime import datetime
 import re
 from readinglistmanager.model.issue import Issue
 from readinglistmanager.model.series import Series
+from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.datamanager.datasource import Source, ListSourceType
 from readinglistmanager import config, filemanager, utilities
 
@@ -43,25 +44,18 @@ class ReadingList:
         for key, issue in sorted(self.issueList.items()):
             if isinstance(issue, Issue):
                 # Check if issue cover date exists
-                if issue.coverDate is not None and isinstance(issue.coverDate, datetime):
-                    issueYear = issue.coverDate.year
-                else:
-                    issueYear = issue.year
-                
-                if issueYear is None : issueYear = '' 
-
                 seriesName = utilities.escapeString(issue.series.name)
                 issueNum = utilities.escapeString(issue.issueNumber)
 
                 if issue.hasValidID() or (isinstance(issue.series, Series) and issue.series.hasValidID()):
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (
-                        seriesName, issueNum, issue.series.startYear, issueYear))
+                        seriesName, issueNum, issue.series.startYear, issue.getYear()))
                     lines.append(
                         "<Database Name=\"cv\" Series=\"%s\" Issue=\"%s\" />" % (issue.series.id, issue.id))
                     lines.append("</Book>")
                 else:
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" %
-                                 (seriesName, issueNum, issue.series.startYear, issueYear))
+                                 (seriesName, issueNum, issue.series.startYear, issue.getYear()))
 
         lines.append("</Books>")
         lines.append("<Matchers />")
@@ -101,9 +95,9 @@ class ReadingList:
 
         if self.issueList is not None and issueCount > 0:
             for number, issue in self.issueList.items():
-                if isinstance(issue, Issue) and issue.year is not None:
+                if isinstance(issue, Issue) and issue.getYear() is not None:
                     try:
-                        curIssueYear = int(issue.year)
+                        curIssueYear = int(issue.getYear())
                     except:
                         continue
 

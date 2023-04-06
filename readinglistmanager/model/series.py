@@ -69,7 +69,7 @@ class Series:
     
     def getKey(self):
         if None not in (self.name,self.startYear):
-            return Series.getKey(self.name,self.startYear)
+            return Series.getSeriesKey(self.name,self.startYear)
 
     def addIssue(self, issueObject : Issue) -> None:
         if isinstance(issueObject, Issue):

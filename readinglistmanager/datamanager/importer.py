@@ -8,6 +8,7 @@ from readinglistmanager.utilities import printResults
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.date import PublicationDate
 import xml.etree.ElementTree as ET
 
 dbTables = {'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'}
@@ -59,7 +60,7 @@ def parseCBLfiles():
                     issueNumber = entry.attrib['Number']
                     issueYear = None
                     if 'Year' in entry.attrib:
-                        issueYear = entry.attrib['Year']
+                        issueYear = PublicationDate(entry.attrib['Year'])
                     
                     seriesID = issueID = None
 
@@ -76,7 +77,7 @@ def parseCBLfiles():
 
                     # Get issue using series
                     if isinstance(curIssue,Issue):
-                        curIssue.year = issueYear
+                        curIssue.setSourceDate(issueYear)
                         # Update seriesID if found
                         if seriesID is not None and utilities.isValidID(seriesID) and isinstance(curIssue.series,Series) and curIssue.series.id is None:
                             curIssue.series.id = seriesID
@@ -156,12 +157,17 @@ def getOnlineLists():
                                         listEntryID, readingList.name), 4)
                                 
                                 #for issueEntry in entryMatches:
-                                _, seriesName, seriesStartYear, issueNum, _ = entryMatches[0]
+                                _, seriesName, seriesStartYear, issueNum, _, sourceIssueDate = entryMatches[0]
 
                                 if None in (seriesName, seriesStartYear):
                                     curProblemEntries += 1
                                 else:
                                     curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
+
+                                    if curIssue is not None and isinstance(curIssue, Issue):
+                                        if sourceIssueDate is not None: 
+                                            curIssue.setSourceDate(PublicationDate(sourceIssueDate))
+
                                     curReadingList.addIssue(listEntryNum, curIssue)
                         
                         totalProblemEntries += curProblemEntries

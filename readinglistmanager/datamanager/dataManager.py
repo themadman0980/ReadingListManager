@@ -5,7 +5,7 @@
 
 from readinglistmanager import filemanager,utilities,config
 from readinglistmanager.utilities import printResults
-from readinglistmanager.errorhandling.problemdata import ProblemData
+from readinglistmanager.errorhandling.problemdata import ProblemData, ProblemSeries
 from readinglistmanager.datamanager import cvManager,dbManager,datasource, save
 from readinglistmanager.datamanager.datasource import ComicInformationSource, DataSourceType, ListSourceType
 from readinglistmanager.model.readinglist import ReadingList
@@ -703,3 +703,99 @@ def saveSeriesSummary(readingLists : list):
         stringData = ReadingList.getSeriesSummary(readingLists)
 
         save.saveDataListToTXT(filemanager.seriesFile, stringData, True)
+
+def processNoIssueMatches():
+
+    #Process series where there are more issues in list than are found on CV
+    # ie. Series is split between 2 vols
+     
+    data = ProblemData.getData(ProblemData.ProblemType.CVNoIssueMatch)
+    seriesMatches = dict()
+
+    for problemSeries in data:
+        if isinstance(problemSeries, ProblemSeries):
+            seriesIssueNumbers = problemSeries.getIssueNumsList()
+            seriesIssuesMatched = dict()
+            seriesIssuesMatched['unknown'] = seriesIssueNumbers
+
+
+            # Get list of series name matches
+            seriesList = cv.getSeriesFromNameFilter(problemSeries.series.name)
+            seriesYearList = dict()
+
+            for series in seriesList:
+                if series['startYear'] not in seriesYearList: seriesYearList[series['startYear']] = list()
+                seriesYearList[series['startYear']].append(series['seriesID'])
+                    
+            seriesYearList = dict(sorted(seriesYearList.items(), key=lambda item: item[1]))
+
+
+            # Iterate through series matches starting with year given
+            #TODO: Set year match priority
+            for curSeries in seriesList:
+                seriesIssuesMatched = _getSeriesIssuesMatch(seriesIssuesMatched, curSeries)
+                if len(seriesIssuesMatched['unknown']) == 0:
+                    # All issues matched!
+                    break
+
+            #if isinstance(problemSeries.data,dict) and ComicInformationSource.ResultFilterType.Allowed in problemSeries.data:
+            #    if len(problemSeries.data[ComicInformationSource.ResultFilterType.Allowed]) == 1:
+            #        #Exactly one series match - proceed!
+            #        seriesResult = problemSeries.data[ComicInformationSource.ResultFilterType.Allowed][0]
+            #        for dataSource in dataSources:
+            #            seriesIssues = None
+            #            if isinstance(dataSource, ComicInformationSource):
+            #                seriesIssues = dataSource.getIssuesFromSeriesID(seriesResult['seriesID'])
+            #            # Check if issue results exist
+            #            if seriesIssues is not None and len(seriesIssues) > 0:
+            #                exactSeriesMatch = True
+            #                while(len(seriesIssuesMatched['unknown']) > 0):
+            #                # Quick test to check that numResults >= numSeriesIssues 
+            #                if len(seriesIssues) < len(seriesIssueNumbers):
+            #                    # TODO : Check for split series here
+            #                    for curIssueNum in seriesIssueNumbers:
+            #                        if curIssueNum in seriesIssues.keys():
+            #                            #Transfer issue number from unmatched to matched list
+            #                            seriesIssuesMatched['seriesID'].append(seriesIssuesMatched['unknown'].pop(curIssueNum))
+            #                    #if len(seriesIssuesMatched) > 0:
+            #                    #    seriesMatches[seriesResult['seriesID']] = seriesIssuesMatched
+            #                    if len(seriesIssuesMatched['unknown']) > 0:
+            #                        issueStrings = utilities.simplifyListOfNumbers(seriesIssuesMatched['unknown'])
+            #                        
+            #                    exactSeriesMatch = False
+            #                    break
+            #                if isinstance(dataSource, ComicInformationSource):
+            #                    seriesIssues = dataSource.getIssuesFromSeriesID(seriesResult['seriesID'])
+
+# Given a dict of series : issueNums and series details dict, check for issue matches and return updated issueNum dict
+def _getSeriesIssuesMatch(seriesIssueMatches : dict, seriesDict : dict):
+    updatedSeriesIssueMatches = seriesIssueMatches
+
+    if isinstance(seriesDict, dict) and isinstance(updatedSeriesIssueMatches, dict) and 'seriesID' in seriesDict:
+        for dataSource in dataSources:
+            seriesIssues = None
+
+            if isinstance(dataSource, ComicInformationSource):
+                # Grab issue details
+                seriesIssues = dataSource.getIssuesFromSeriesID(seriesDict['seriesID'])
+
+                for issueNum in updatedSeriesIssueMatches['unknown']:
+                    if isinstance(seriesIssues, dict) and issueNum in seriesIssues.keys():
+                        if 'issueType' in seriesIssues[issueNum] and seriesIssues[issueNum]['issueType'] == ComicInformationSource.IssueType.Trade:
+                            return seriesIssueMatches
+
+                        # Initialise list if needed
+                        if seriesDict['seriesID'] not in updatedSeriesIssueMatches: 
+                            updatedSeriesIssueMatches[seriesDict['seriesID']] = list()
+
+                        # Update lists
+                        updatedSeriesIssueMatches[seriesDict['seriesID']].append(issueNum)
+                        updatedSeriesIssueMatches['unknown'].remove(issueNum)
+
+
+                if seriesIssues is not None:
+                    #Exit loop if match found
+                    return updatedSeriesIssueMatches
+
+    
+    return updatedSeriesIssueMatches
