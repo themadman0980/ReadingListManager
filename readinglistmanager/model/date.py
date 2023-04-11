@@ -19,10 +19,12 @@ class PublicationDate:
         if isinstance(entryDateTime, datetime.date):
             dateString = utilities.getStringFromDate(entryDateTime)
             return PublicationDate(dateString)
-    
-    def __init__(self, data : str = None):
+
+    def __init__(self, data: str = None, dateTimeObj: datetime.datetime = None):
         self.data = data
-        
+
+        self.dateTimeObj = dateTimeObj
+
         self.type = None
         self.year = None
         self.month = None
@@ -30,7 +32,51 @@ class PublicationDate:
 
         self._processDate()
 
-    def setDate(self, data : str = None):
+    def __eq__(self, other):
+        if not isinstance(other, PublicationDate):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+
+        if self.year == other.year:
+            if None in (self.month, other.month):
+                return True
+            elif self.month == other.month:
+                if None in (self.day, other.day):
+                    return True
+                elif self.day == other.day:
+                    return True
+
+        return False
+
+    def __hash__(self):
+        # necessary for instances to behave sanely in dicts and sets.
+        return hash((self.year, self.month, self.day))
+
+    def __lt__(self, other):
+        try:
+            return self.dateTimeObj.timestamp() < other.dateTimeObj.timestamp()
+        finally:
+            return None
+
+    def __le__(self, other):
+        try:
+            return self < other or self == other
+        finally:
+            return None
+
+    def __gt__(self, other):
+        try:
+            return self.dateTimeObj.timestamp() > other.dateTimeObj.timestamp()
+        finally:
+            return None
+
+    def __ge__(self, other):
+        try:
+            return self > other or self == other
+        finally:
+            return None
+
+    def setDate(self, data: str = None):
         if data is not None:
             if self.data is not None:
                 # Overwriting existing data is not good!
@@ -59,6 +105,7 @@ class PublicationDate:
 
                     if dateObj is not None:
                         self.type = dateType
+                        self.dateTimeObj = dateObj
 
                         if dateType == PublicationDate.DateType.Day:
                             self.day = dateObj.day
@@ -77,11 +124,11 @@ class PublicationDate:
                 except Exception as e:
                     pass
 
-    def isValid(self):
+    def isValidDate(self):
         if self.type is not None and self.type in PublicationDate.DateType:
             return True
 
         return False
 
-
-
+    def getDateTimeObject(self):
+        return self.dateTimeObj
