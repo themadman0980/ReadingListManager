@@ -374,7 +374,8 @@ class ReadingList:
 
     title = property(**title())
 
-    def getSeriesSummary(readingLists : list) -> list:
+
+    def getEventSeriesSummary(readingLists : list) -> list:
         
         textLines = ["Summary of Reading List Series"]
 

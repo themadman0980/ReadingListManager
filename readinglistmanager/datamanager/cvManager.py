@@ -89,7 +89,7 @@ class CV(ComicInformationSource):
             seriesDetails.update({
                 'seriesID': result.volume_id, 
                 'name' : result.name, 
-                'startYear' : PublicationDate(result.start_year), 
+                'startYear' : result.start_year, 
                 'publisher' : publisher, 
                 'numIssues' : result.issue_count, 
                 'description' : result.description, 
@@ -105,7 +105,7 @@ class CV(ComicInformationSource):
                     seriesDetails.update({
                         'seriesID': result.volume_id, 
                         'name' : result.name, 
-                        'startYear' : PublicationDate(result.start_year), 
+                        'startYear' : result.start_year, 
                         'publisher' : publisher, 
                         'numIssues' : result.issue_count, 
                         'description' : result.description, 

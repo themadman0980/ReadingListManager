@@ -13,6 +13,7 @@ class Issue:
             printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
         self.issueNumber = str(issueNumber)
         self.series = series
+        self.listReferences = dict()
         self.id = None
         self.year = None
         self.name = None
@@ -56,6 +57,12 @@ class Issue:
         newIssue.updateDetailsFromDict(match)
         return newIssue
 
+    def addReadingListRef(self,readingList, listEntryNum):
+        self.listReferences[readingList] = listEntryNum
+
+    def getReadingListRefs(self):
+        return self.listReferences
+
     def updateDetailsFromDict(self, match : dict) -> None:
         # Populate attributes from _issueDetailsTemplate dict structure
         try:
@@ -78,7 +85,7 @@ class Issue:
     def setSourceDate(self, issueDate : PublicationDate):
         if isinstance(issueDate, PublicationDate):
             self.sourceDate = issueDate
-        else:
+        elif issueDate is not None:
             try:
                 self.sourceDate = PublicationDate(issueDate)
             except Exception as e:
@@ -87,7 +94,7 @@ class Issue:
     def setCoverDate(self, coverDate : PublicationDate):
         if isinstance(coverDate, PublicationDate):
             self.coverDate = coverDate
-        else:
+        elif coverDate is not None:
             try:
                 self.coverDate = PublicationDate(coverDate)
             except Exception as e:

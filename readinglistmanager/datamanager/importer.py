@@ -87,6 +87,7 @@ def parseCBLfiles():
                             curIssue.id = issueID
 
                     readingList.addIssue(i, curIssue)
+                    curIssue.addReadingListRef(readingList, i)
 
                 if len(readingList.issueList) == 0:
                     printResults(
@@ -159,7 +160,7 @@ def getOnlineLists():
                                 #for issueEntry in entryMatches:
                                 _, seriesName, seriesStartYear, issueNum, _, sourceIssueDate = entryMatches[0]
 
-                                if None in (seriesName, seriesStartYear):
+                                if None in (seriesName, seriesStartYear, issueNum):
                                     curProblemEntries += 1
                                 else:
                                     curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
@@ -169,6 +170,7 @@ def getOnlineLists():
                                             curIssue.setSourceDate(PublicationDate(sourceIssueDate))
 
                                     curReadingList.addIssue(listEntryNum, curIssue)
+                                    curIssue.addReadingListRef(curReadingList, listEntryNum)
                         
                         totalProblemEntries += curProblemEntries
                         if curProblemEntries > 0: 

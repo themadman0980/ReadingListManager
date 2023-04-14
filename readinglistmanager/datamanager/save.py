@@ -6,6 +6,8 @@ import json
 from enum import Enum
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.series import CoreSeries
+from readinglistmanager.datamanager import summaryManager
 from readinglistmanager.datamanager.datasource import Source, ListSourceType
 from readinglistmanager import filemanager, utilities, config
 
@@ -92,6 +94,11 @@ def saveDataListToTXT(fileName: str, listData: list, isCompleteFilePath=False) -
             for line in listData:
                 outputFile.write(f"{line}\n")
 
+def saveEventSeriesSummary(stringData : str):
+    saveDataListToTXT(filemanager.eventSeriesFile, stringData, True)
+
+def saveSeriesEventSummary(stringData : str):
+    saveDataListToTXT(filemanager.seriesEventFile, stringData, True)
 
 def getReadingListOutputDirectory(readingList: ReadingList, outputFileType: OutputFileType) -> str:
     originFolder = filemanager.readingListDirectory

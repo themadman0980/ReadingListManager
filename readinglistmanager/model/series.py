@@ -184,3 +184,122 @@ class Series:
             'dateAdded': self.dateAdded
             }
         return data
+
+class CoreSeries(Series):
+# Used for creating and managing series event summary data
+
+    def __init__(self, series):
+        self.series = series
+        self.events = dict()
+        self.nonEventIssueNums = None
+        self.eventsByFirstIssue = dict()
+
+    def __getattr__(self, attr):
+        return getattr(self.series, attr)
+    
+    def getID(self):
+        if self.series.hasValidID():
+            return self.series.id
+        
+        return None
+
+    def addEvent(self, readingList : str, issueNum : str):
+        if readingList not in self.events: 
+            self.events[readingList] = [issueNum]
+        else:
+            self.events[readingList].append(issueNum)
+
+    def organiseIssueNums(self, seriesCompleteIssueNumList):
+        
+        if self.series.name == "The Flash":
+            pass
+
+        self._organiseNonEventIssueNums(seriesCompleteIssueNumList)
+
+        self._organiseEventIssueNums()
+
+        self._populateIssuesBetweenEvents()
+
+
+    def _organiseNonEventIssueNums(self, issueNumsList : list):
+
+        # 1. Get all series issue numbers
+        self.nonEventIssueNums = issueNumsList.copy()
+
+        # 2. Drop all issue numbers that have already been accounted for by events
+        for eventIssues in self.events.values():
+            if eventIssues is not None:
+
+                for issueNum in eventIssues:
+                    if issueNum in self.nonEventIssueNums:
+                        self.nonEventIssueNums.remove(issueNum)
+
+        # 3. Group remaining issue numbers
+        self.nonEventIssueNums = utilities.simplifyListOfNumbers(self.nonEventIssueNums)
+
+
+    def _organiseEventIssueNums(self):
+
+        for readingList, issueNumList in self.events.items():
+            self.events[readingList] = utilities.simplifyListOfNumbers(issueNumList)
+
+
+    def _populateIssuesBetweenEvents(self):
+
+        # 1. Organise events by first issue number
+        for event, eventIssueNums in self.events.items():
+            if eventIssueNums is not None:
+                firstIssueNum = utilities.getFirstIssueNum(eventIssueNums)
+                
+                if firstIssueNum in self.eventsByFirstIssue:
+                    #There is a problem! Shouldn't have the same first issue num for multiple events!
+                    pass
+
+                self.eventsByFirstIssue[firstIssueNum] = {'event': event, 'issueNums': eventIssueNums}
+
+        # 2. Insert issue groups between events
+        if self.nonEventIssueNums is not None:
+            for issueNumGroup in self.nonEventIssueNums:
+                firstIssueNum = utilities.getFirstIssueNum(issueNumGroup)
+
+                if firstIssueNum in self.eventsByFirstIssue:
+                    #There is a problem! Shouldn't have the same first issue num for multiple events!
+                    pass
+
+                self.eventsByFirstIssue[firstIssueNum] = {'issueNums': issueNumGroup}
+
+        sortedIssues = sorted(self.eventsByFirstIssue.items(),key=lambda x:float(x[0]) if x[0] is not None and x[0].replace(".", "", 1).isdigit() else float('inf'))
+        self.eventsByFirstIssue = dict(sortedIssues)
+
+    def getEventsList(self):
+        return self.events
+
+    def getEventsSummary(self) -> str:
+
+        textLines = [self.series.title]
+
+        #for readingList, issueNumList in self.events.items():
+        #    try:
+        #        textLines.append("%s: %s" % (readingList.title, ", ".join(issueNumList)))
+        #    except:
+        #        pass
+
+        for issueNumsDict in self.eventsByFirstIssue.values():
+            
+            issueNumsString = issueNumsDict['issueNums']
+
+            if isinstance(issueNumsString, list):
+                issueNumsString = ", ".join(issueNumsString)
+
+            if 'event' in issueNumsDict and issueNumsDict['event'] is not None:
+                try:
+                    textLines.append("%s: #%s" % (issueNumsDict['event'].title, issueNumsString))
+                except Exception as e:
+                    pass
+            else:
+                textLines.append("#%s" % (issueNumsString))
+
+
+        textLines.append("\n")
+
+        return textLines

@@ -45,7 +45,12 @@ def main():
 
     dataManager.printSummaryResults()
     problemdata.ProblemData.printSummaryResults()
-    dataManager.saveSeriesSummary(readingLists)
+
+    stringData = ReadingList.getEventSeriesSummary(readingLists)
+    save.saveEventSeriesSummary(stringData)
+
+    stringData = dataManager.getSeriesEvents()
+    save.saveSeriesEventSummary(stringData)
     #ReadingList.printSummaryResults(readingLists)
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()

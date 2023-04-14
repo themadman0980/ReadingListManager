@@ -9,7 +9,7 @@ from readinglistmanager.errorhandling.problemdata import ProblemData, ProblemSer
 from readinglistmanager.datamanager import cvManager,dbManager,datasource, save
 from readinglistmanager.datamanager.datasource import ComicInformationSource, DataSourceType, ListSourceType
 from readinglistmanager.model.readinglist import ReadingList
-from readinglistmanager.model.series import Series
+from readinglistmanager.model.series import Series, CoreSeries
 from readinglistmanager.model.issue import Issue
 
 dataDB = dbManager.DataDB.get()
@@ -21,10 +21,19 @@ dataSources = [dataDB, cv]
 _series = {}
 _readingLists = {}
 _seriesOverrideList = None
-counters = {'matches' : {'override' : 0, 'cv' : 0, 'db' : 0}, 'noMatches':{'override' : 0, 'cv' : 0, 'db' : 0}, 'matchType' : {'one' : 0, 'multiple' : 0, 'blacklist' : 0}}
+counters = {
+    'matches' : {'override' : 0, 'cv' : 0, 'db' : 0}, 
+    'noMatches': {'override' : 0, 'cv' : 0, 'db' : 0}, 
+    'matchType' : {'one' : 0, 'multiple' : 0, 'blacklist' : 0}
+    }
 overrideMatchCounter = 0
 
 lookupMatch = {'match' : None, 'problemData' : None }
+
+CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl"]
+
+_coreSeriesDict = dict()
+
 
 def _getSeriesOverrideDetails() -> dict:
     seriesAltData = {}
@@ -480,7 +489,17 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
 def _addSeriesToList(series : Series) -> None:
     # Add series to master series dict 
     _series[series.key] = series
-    _series[series.id] = series
+    if series.id is not None:
+        _series[series.id] = series
+
+    # Add core series to special set
+    if series.name in CORE_SERIES:
+        if series.name not in _coreSeriesDict:
+            _coreSeriesDict[series.name] = set()
+
+        newCoreSeries = CoreSeries(series)
+        _coreSeriesDict[series.name].add(newCoreSeries)
+
 
 def _addReadingList(readingList : ReadingList) -> None:
     # Add series to master series dict 
@@ -698,11 +717,49 @@ def getSeriesIDList() -> list:
     seriesList = set(series.id for series in _series.values())
     return seriesList
 
-def saveSeriesSummary(readingLists : list):
-    if isinstance(readingLists, list):
-        stringData = ReadingList.getSeriesSummary(readingLists)
+def getIssueNumsList(seriesID : str) -> list:
+    issueNums = list()
+    for source in dataSources:
+        
+        # Get all issue details from source
+        issueDetails = source.getIssuesFromSeriesID(seriesID)
+        
+        if issueDetails is not None:
 
-        save.saveDataListToTXT(filemanager.seriesFile, stringData, True)
+            #Add issue numbers to list
+            for issue in issueDetails.values():
+                issueNums.append(issue['issueNum'])
+            
+            #don't bother checking other sources
+            return issueNums
+
+    # If no matches found in either source
+    return None
+
+def getSeriesEvents() -> str:
+
+    stringData = ["Summary of Series Events\n"]
+
+    for seriesName, seriesSet in _coreSeriesDict.items():
+        if seriesSet is not None and isinstance(seriesSet, set):
+            for curSeries in seriesSet:
+                if isinstance(curSeries, CoreSeries):
+                    # Get all reading list references in each Issue
+                    for issue in curSeries.issueList.values():
+                        if isinstance(issue, Issue):
+                            readingListRefs = issue.getReadingListRefs()
+                            for readingList, entryNum in readingListRefs.items():
+                                curSeries.addEvent(readingList, issue.issueNumber)
+                    
+                    #Simplify issue numbers
+                    seriesIssueNums = getIssueNumsList(curSeries.getID())
+                    curSeries.organiseIssueNums(seriesIssueNums)
+                    
+                    #Export series event list to file
+                    stringData.extend(curSeries.getEventsSummary())
+    
+    return stringData
+
 
 def processNoIssueMatches():
 

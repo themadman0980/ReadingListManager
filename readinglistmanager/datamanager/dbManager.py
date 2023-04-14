@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from readinglistmanager import utilities, config,filemanager,utilities
 from readinglistmanager.errorhandling import problemdata
+from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.utilities import printResults
 from readinglistmanager.datamanager.datasource import ComicInformationSource, Source, ListSourceType
 import sqlite3, datetime
@@ -258,9 +259,11 @@ class DataDB(DB,ComicInformationSource):
 
         if len(checkResults) > 0:
             # Match already exists!
-            if config.verbose: print("Issue #%s [%s] from series [%s] already exists in the DB!" % (issueDetails['issueNum'], issueDetails['issueID'], issueDetails['seriesID']))
+            if config.Troubleshooting.verbose: print("Issue #%s [%s] from series [%s] already exists in the DB!" % (issueDetails['issueNum'], issueDetails['issueID'], issueDetails['seriesID']))
         elif utilities.isValidID(issueDetails['issueID']) and issueDetails['issueNum'] is not None:
-            if isinstance(issueDetails['coverDate'],datetime.datetime):
+            if isinstance(issueDetails['coverDate'],PublicationDate):
+                coverDate = issueDetails['coverDate'].getString()
+            elif isinstance(issueDetails['coverDate'],datetime.datetime):
                 coverDate = utilities.getStringFromDate(issueDetails['coverDate'])
             else:
                 coverDate = issueDetails['coverDate']
