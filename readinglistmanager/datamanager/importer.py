@@ -62,6 +62,18 @@ def parseCBLfiles():
                     if 'Year' in entry.attrib:
                         issueYear = PublicationDate(entry.attrib['Year'])
                     
+                    essentialFields = (seriesName, seriesStartYear, issueNumber)
+                    discardValues = [None, "", " "]
+                    problem = False
+
+                    for field in essentialFields:
+                        if field in discardValues:
+                            curProblemEntries += 1
+                            problem = True
+
+                    if problem:
+                        continue
+
                     seriesID = issueID = None
 
                     # Check for ID details in CBL entry
@@ -87,7 +99,7 @@ def parseCBLfiles():
                             curIssue.id = issueID
 
                     readingList.addIssue(i, curIssue)
-                    curIssue.addReadingListRef(readingList, i)
+                    curIssue.addReadingListRef(readingList)
 
                 if len(readingList.issueList) == 0:
                     printResults(
@@ -160,17 +172,26 @@ def getOnlineLists():
                                 #for issueEntry in entryMatches:
                                 _, seriesName, seriesStartYear, issueNum, _, sourceIssueDate = entryMatches[0]
 
-                                if None in (seriesName, seriesStartYear, issueNum):
-                                    curProblemEntries += 1
-                                else:
-                                    curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
+                                essentialFields = (seriesName, seriesStartYear, issueNum)
+                                discardValues = [None, "", " "]
+                                problem = False
 
-                                    if curIssue is not None and isinstance(curIssue, Issue):
-                                        if sourceIssueDate is not None: 
-                                            curIssue.setSourceDate(PublicationDate(sourceIssueDate))
+                                for field in essentialFields:
+                                    if field in discardValues:
+                                        curProblemEntries += 1
+                                        problem = True
 
-                                    curReadingList.addIssue(listEntryNum, curIssue)
-                                    curIssue.addReadingListRef(curReadingList, listEntryNum)
+                                if problem:
+                                    continue
+
+                                curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
+
+                                if curIssue is not None and isinstance(curIssue, Issue):
+                                    if sourceIssueDate is not None: 
+                                        curIssue.setSourceDate(PublicationDate(sourceIssueDate))
+
+                                curReadingList.addIssue(listEntryNum, curIssue)
+                                curIssue.addReadingListRef(curReadingList)
                         
                         totalProblemEntries += curProblemEntries
                         if curProblemEntries > 0: 

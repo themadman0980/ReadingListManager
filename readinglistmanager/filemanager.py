@@ -23,6 +23,8 @@ resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (_timeString))
 problemsFile = os.path.join(resultsDirectory, "problems-%s.txt" % (_timeString))
 eventSeriesFile = os.path.join(resultsDirectory, "event-series-%s.txt" % (_timeString))
 seriesEventFile = os.path.join(resultsDirectory, "series-events-%s.txt" % (_timeString))
+pumlFile = os.path.join(outputDirectory, "puml-%s.puml" % (_timeString))
+vizGraphFile = os.path.join(outputDirectory, "%s.dot" % (_timeString))
 
 def checkDirectories():
 

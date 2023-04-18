@@ -9,8 +9,9 @@ from readinglistmanager.errorhandling.problemdata import ProblemData, ProblemSer
 from readinglistmanager.datamanager import cvManager,dbManager,datasource, save
 from readinglistmanager.datamanager.datasource import ComicInformationSource, DataSourceType, ListSourceType
 from readinglistmanager.model.readinglist import ReadingList
-from readinglistmanager.model.series import Series, CoreSeries
+from readinglistmanager.model.series import Series, CoreSeries, CoreSeriesCollection
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.issueRange import IssueRangeCollection
 
 dataDB = dbManager.DataDB.get()
 cv = cvManager.CV.get()
@@ -30,9 +31,10 @@ overrideMatchCounter = 0
 
 lookupMatch = {'match' : None, 'problemData' : None }
 
-CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl"]
+CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl",
+    "Iron Man", "The Hulk", "Spider-Man", "Daredevil", "New Avengers", "Dark Avengers"]
 
-_coreSeriesDict = dict()
+_coreSeriesCollection = CoreSeriesCollection()
 
 
 def _getSeriesOverrideDetails() -> dict:
@@ -72,7 +74,7 @@ def getSeriesFromSeriesID(seriesID : str) -> Series:
         for source in dataSources:
             if isinstance(source, ComicInformationSource):
                 seriesData = source.getSeriesFromSeriesID(seriesID)
-                if seriesData is not None and isinstance(seriesData, list): 
+                if seriesData is not None and isinstance(seriesData, list) and len(seriesData) > 0: 
                     seriesData = seriesData[0]
                     series = Series.fromDict(seriesData)
 
@@ -106,16 +108,20 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
         if _seriesOverrideList is not None and seriesKey in _seriesOverrideList:
             # Series found in overrides list
             global overrideMatchCounter; overrideMatchCounter += 1
-            try:
-                seriesID = _seriesOverrideList[seriesKey]['volumeComicvineID']
-                series = getSeriesFromSeriesID(seriesID)
-            except Exception as e:
-                printResults("Error : Unable to process series override for %s (%s) : %s" % (name, startYear, str(e)), 4)
+            #try:
+            seriesID = _seriesOverrideList[seriesKey]['volumeComicvineID']
+            series = getSeriesFromSeriesID(seriesID)
+            if isinstance(series, Series):
+                series.altSeriesKeys.append(seriesKey)
+                _addSeriesToList(series)
+            #except Exception as e:
+            #    printResults("Error : Unable to process series override for %s (%s) : %s" % (name, startYear, str(e)), 4)
             
         # If no result/error in override list
         if series is None:
             # Check all available data sources for an exact match
             series = createNewSeries(name, startYear)
+        
 
     return series
 
@@ -149,7 +155,7 @@ def validateReadingLists(readingLists : list[ReadingList]) -> None:
     printResults("Checking %s reading lists" % (numLists), 2)
 
     readingListNames = list(set(readingList.name for readingList in readingLists))
-    save.saveDataListToTXT('cvListLookup', readingListNames)
+    save.saveDataList('cvListLookup', readingListNames)
     
     if isinstance(readingLists, list):
         for readingList in readingLists:
@@ -173,7 +179,7 @@ def validateSeries() -> None:
     for series in seriesSet:
         i += 1
         if isinstance(series, Series):
-            if not series.checked[sourceType]:
+            if sourceType in series.checked and not series.checked[sourceType]:
                 printResults("%s / %s series checked" % (i,numSeries),4,False,True)
                 _updateSeriesFromDataSources(series,sourceType)
 
@@ -224,7 +230,7 @@ def validateSeries() -> None:
     # Save unmatched series to file
 
     cvSeriesNames = list(set(series.name for series in checkCVSeriesSet if isinstance(series, Series)))
-    save.saveDataListToTXT('cvSeriesLookup', cvSeriesNames)
+    save.saveDataList('cvSeriesLookup', cvSeriesNames)
 
 def _filterSeriesResults(results : list[dict], series : Series) -> dict[list[dict]]:
     preferredType = ComicInformationSource.ResultFilterType.Preferred 
@@ -489,16 +495,17 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
 def _addSeriesToList(series : Series) -> None:
     # Add series to master series dict 
     _series[series.key] = series
+    if len(series.altSeriesKeys) > 0:
+        for seriesKey in series.altSeriesKeys:
+            _series[seriesKey] = series
+
     if series.id is not None:
         _series[series.id] = series
 
     # Add core series to special set
     if series.name in CORE_SERIES:
-        if series.name not in _coreSeriesDict:
-            _coreSeriesDict[series.name] = set()
-
         newCoreSeries = CoreSeries(series)
-        _coreSeriesDict[series.name].add(newCoreSeries)
+        _coreSeriesCollection.addCoreSeries(newCoreSeries)
 
 
 def _addReadingList(readingList : ReadingList) -> None:
@@ -564,19 +571,24 @@ def _getSeriesIssueDetails(seriesObject : Series) -> None:
                 issueDetailsList = dataSource.getIssuesFromSeriesID(seriesObject.id)
                 if issueDetailsList is not None and len(issueDetailsList) > 0:
                     for issueDetails in issueDetailsList:
-                        if issueDetails['issueNum'] in seriesObject.issueList:
-                            curIssue = seriesObject.issueList[issueDetails['issueNum']]
-                            if isinstance(curIssue, Issue):
-                                curIssue.updateDetailsFromDict(issueDetails)
-                                curIssue.sourceType = dataSource.type
-                                if dataSource.type == ComicInformationSource.SourceType.Comicvine:
-                                    dataDB.addIssue(curIssue.getDBDict())
+                        #if issueDetails['issueNum'] in seriesObject.issueList:
+                        # We want all series issues, not just the ones that are used!
+                        curIssue = seriesObject.issueList[issueDetails['issueNum']]
+                        if isinstance(curIssue, Issue):
+                            curIssue.updateDetailsFromDict(issueDetails)
+                            curIssue.sourceType = dataSource.type
+                            if dataSource.type == ComicInformationSource.SourceType.Comicvine:
+                                dataDB.addIssue(curIssue.getDBDict())
             
             if seriesObject.hasCompleteIssueDetails():
                 break
             else:
                 # Not all details found
                 pass
+
+#def getSeriesIssueDetails(series : Series) -> None:
+#    try:
+#        getSeriesIssueDetails(series)
 
 def getIssueFromDetails(seriesName : str, seriesStartYear : int, issueNum : str) -> Issue:
     issue = None
@@ -737,28 +749,45 @@ def getIssueNumsList(seriesID : str) -> list:
     return None
 
 def getSeriesEvents() -> str:
+        
 
     stringData = ["Summary of Series Events\n"]
 
-    for seriesName, seriesSet in _coreSeriesDict.items():
-        if seriesSet is not None and isinstance(seriesSet, set):
+    for seriesName, seriesDict in _coreSeriesCollection.getCoreSeriesDict().items():
+        for seriesStartYear, seriesSet in seriesDict.items():
             for curSeries in seriesSet:
                 if isinstance(curSeries, CoreSeries):
                     # Get all reading list references in each Issue
                     for issue in curSeries.issueList.values():
-                        if isinstance(issue, Issue):
+                        try:
                             readingListRefs = issue.getReadingListRefs()
-                            for readingList, entryNum in readingListRefs.items():
-                                curSeries.addEvent(readingList, issue.issueNumber)
+                            for readingList in readingListRefs:
+                                curSeries.addReadingListReference(readingList, issue.issueNumber)
+                        except:
+                            pass
                     
+                    #tempDict = dict()
+                    #for readingList, issueNumList in curSeries.readingListReferences.items():
+                    #    tempDict[readingList.name] = IssueRangeCollection.fromListOfNumbers(issueNumList)
+
+
                     #Simplify issue numbers
                     seriesIssueNums = getIssueNumsList(curSeries.getID())
                     curSeries.organiseIssueNums(seriesIssueNums)
+                    #curSeries.getEventRelationshipString()
                     
                     #Export series event list to file
                     stringData.extend(curSeries.getEventsSummary())
     
     return stringData
+
+def getPUMLString() -> str:
+        
+    return _coreSeriesCollection.getPUMLString()
+
+def getVizGraphString() -> str:
+        
+    return _coreSeriesCollection.getVizGraphString()
 
 
 def processNoIssueMatches():

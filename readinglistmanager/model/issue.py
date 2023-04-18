@@ -13,7 +13,7 @@ class Issue:
             printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
         self.issueNumber = str(issueNumber)
         self.series = series
-        self.listReferences = dict()
+        self.listReferences = set()
         self.id = None
         self.year = None
         self.name = None
@@ -57,8 +57,8 @@ class Issue:
         newIssue.updateDetailsFromDict(match)
         return newIssue
 
-    def addReadingListRef(self,readingList, listEntryNum):
-        self.listReferences[readingList] = listEntryNum
+    def addReadingListRef(self,readingList):
+        self.listReferences.add(readingList)
 
     def getReadingListRefs(self):
         return self.listReferences

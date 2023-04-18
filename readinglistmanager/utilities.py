@@ -7,6 +7,7 @@ import os
 import string
 from datetime import datetime, date
 from readinglistmanager import filemanager
+import decimal
 
 resultsFile = filemanager.resultsFile
 problemsFile = filemanager.problemsFile
@@ -101,9 +102,39 @@ def fixEncoding(string):
 
 def isValidID(ID):
     if ID is not None:
-        isDigit = str(ID).isdigit()
+        isDigit = isNumber(ID)
         return isDigit
     return False
+
+def isNumber(value):
+    try:
+        return str(value).replace('.','',1).isdigit()
+    except Exception as e:
+        return False
+
+def isInteger(value):
+    try:
+        tempValue = str(value)
+        return '.' not in tempValue and tempValue.isdigit()
+    except Exception as e:
+        return False
+
+def convertToNumber(value):
+    try:
+        tmpString = str(value)
+        if '.' in tmpString:
+            return float(value)
+        elif tmpString.isdigit():
+            return int(value)
+    except Exception as e:
+        return value
+
+    return None
+
+def float_range(start, stop, step):
+    while start < stop:
+        yield float(start)
+        start += decimal.Decimal(step)
 
 # def fixEncoding(string):
 #    wrong = 'windows-1252'
@@ -289,94 +320,6 @@ def cleanFileName(orig_name: str):
 
     return fixed_name
 
-def getFirstIssueNum(issueNums) -> str:
-
-    if isinstance(issueNums, list):
-        firstIssueNum = issueNums[0]
-    else:
-        firstIssueNum = issueNums
-
-    if isinstance(firstIssueNum, str):
-        # Don't order by issue #0 if present!
-        if firstIssueNum.isdigit() and int(firstIssueNum) == 0:
-            if isinstance(issueNums, list):
-                firstIssueNum = issueNums[1]
-
-        # Extract first issue from issue group
-        if '-' in firstIssueNum:
-            firstIssueNum = firstIssueNum.split('-')[0]
-
-        return firstIssueNum
-        
-    
-    return None
-    
-
-
-
-def simplifyListOfNumbers(listNumbers : list) -> list:
-    # Intended to organise and simplify issue numbers into concatenated groups where possible
-
-    outputList = []
-    intList = set()
-
-    if isinstance(listNumbers, list) and len(listNumbers) > 1:
-        #Filter out non-digit issue numbers
-        for listNum in listNumbers:
-            if isinstance(listNum,str) and listNum.isdigit():
-                intList.add(int(listNum))
-            else:
-                outputList.append(listNum)
-    
-        curStartingInt = None
-        prevInt = None
-        sortedInts = list(sorted(intList))
-
-        #if len(outputList) == 1 :
-        #    outputList = listNumbers
-        #    return sorted(outputList)
-        
-        endOfCurRange = False
-        endOfList = False
-        
-        #Iterate through digit issue numbers
-        numItems = len(sortedInts)
-        for i in range(numItems):
-            #if sortedInts[i] == 7:
-            #    pass
-
-            if curStartingInt == None:
-                # Starting a new consecutive number trail
-                curStartingInt = sortedInts[i]
-            elif sortedInts[i] == sortedInts[i-1] + 1:
-                # Current int is next consecutive number
-                pass
-            else:
-                endOfCurRange = True
-            
-            if i == len(sortedInts) - 1:
-                endOfList = True
-            
-            if endOfCurRange or endOfList:
-                if endOfCurRange:
-                    finishingInt = sortedInts[i-1]
-                elif endOfList:
-                    finishingInt = sortedInts[i]
-
-                if curStartingInt != finishingInt:
-                    outputList.append("%s-%s" % (curStartingInt,finishingInt))
-                else:
-                    outputList.append("%s" % (finishingInt))
-
-                #Reset number trail
-                curStartingInt = sortedInts[i]
-                endOfCurRange = False
-
-    else: 
-        outputList = listNumbers
-    
-    return sorted(outputList)
-
 
 def confirmMylarImports() -> bool:
     yes = {'yes','y', 'ye'}
@@ -388,6 +331,3 @@ def confirmMylarImports() -> bool:
         return True
     else:
         return False
-
-
-

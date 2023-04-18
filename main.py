@@ -51,6 +51,9 @@ def main():
 
     stringData = dataManager.getSeriesEvents()
     save.saveSeriesEventSummary(stringData)
+
+    stringData = dataManager.getVizGraphString()
+    save.saveVizGraphFile(stringData)
     #ReadingList.printSummaryResults(readingLists)
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()

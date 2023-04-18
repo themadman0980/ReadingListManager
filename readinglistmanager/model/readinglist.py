@@ -6,13 +6,14 @@ import os
 from datetime import datetime
 import re
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.issueRange import IssueRange, IssueRangeCollection
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.datamanager.datasource import Source, ListSourceType
 from readinglistmanager import config, filemanager, utilities
 
 
-class ReadingList:
+class ReadingList():
 
     #    @classmethod
     #    def printSummaryResults(self, readingLists):
@@ -398,13 +399,19 @@ class ReadingList:
                         seriesLength = None
 
                         for issue in issues:
-                            if isinstance(issue, Issue): 
+                            if isinstance(issue, Issue):                     
+                                if issue.issueNumber is None or issue.issueNumber in ["", " "]:
+                                    pass
+
                                 issueNumList.append(issue.issueNumber)
                                 if seriesLength is None and isinstance(issue.series, Series):
                                     seriesLength = issue.series.numIssues
 
                         # Try to group
-                        curIssueList = utilities.simplifyListOfNumbers(issueNumList)
+                        if "." in issueNumList:
+                            pass
+                        
+                        curIssueList = IssueRangeCollection.fromListOfNumbers(issueNumList)
 
 
                         if seriesLength is None:
@@ -414,7 +421,7 @@ class ReadingList:
                         else:
                             completeStatus = "Incomplete"
 
-                        textLines.append("%s : %s [%s]" % (series,", ".join(curIssueList),completeStatus))
+                        textLines.append("%s : %s [%s]" % (series, curIssueList.issueRangeString, completeStatus))
         
         return textLines
 

@@ -99,12 +99,14 @@ class DataDB(DB,ComicInformationSource):
             for result in seriesResults:
                 curResult = ComicInformationSource._seriesDetailsTemplate.copy()
                 seriesID, name, startYear, numIssues, publisher = result
+                issueList = self.getIssuesFromSeriesID(seriesID)
                 curResult.update({
                     'seriesID':seriesID,
                     'name':name,
                     'startYear':startYear,
                     'publisher':publisher,
                     'numIssues':numIssues,
+                    'issueList':issueList,
                     'dataSource':self.type
                     })
                 results.append(curResult)

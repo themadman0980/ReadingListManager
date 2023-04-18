@@ -84,8 +84,8 @@ class CV(ComicInformationSource):
             # Single result found
             result = volumeResults
             seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
-            publisher = None
             publisher = result.publisher.name if result.publisher is not None else None
+            issueList = self.convertIssueResultsToDict(volumeResults, ComicInformationSource.ResultType.IssueList) if hasattr(volumeResults, 'issues') else None
             seriesDetails.update({
                 'seriesID': result.volume_id, 
                 'name' : result.name, 
@@ -94,6 +94,7 @@ class CV(ComicInformationSource):
                 'numIssues' : result.issue_count, 
                 'description' : result.description, 
                 'summary' : result.summary,
+                'issueList' : issueList,
                 'dataSource' : self.type
                 })
             results.append(seriesDetails)
@@ -102,6 +103,7 @@ class CV(ComicInformationSource):
                 if isinstance(result, simyan.schemas.volume.VolumeEntry):
                     seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
                     publisher = result.publisher.name if result.publisher is not None else None
+                    issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.IssueList) if hasattr(result, 'issues') else None
                     seriesDetails.update({
                         'seriesID': result.volume_id, 
                         'name' : result.name, 
@@ -110,6 +112,7 @@ class CV(ComicInformationSource):
                         'numIssues' : result.issue_count, 
                         'description' : result.description, 
                         'summary' : result.summary,
+                        'issueList' : issueList,
                         'dataSource' : self.type
                         })
                     results.append(seriesDetails)
@@ -210,11 +213,11 @@ class CV(ComicInformationSource):
 
         if not config.CV.check_series: return None
 
-        try:
-            results = _cvSession.volume_list(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
-            results = self.convertSeriesResultsToDict(results, resultsType)
-        except Exception as e:
-            printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
+        #try:
+        results = _cvSession.volume_list(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
+        results = self.convertSeriesResultsToDict(results, resultsType)
+        #except Exception as e:
+        #    printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
 
         return results
 
@@ -226,26 +229,26 @@ class CV(ComicInformationSource):
 
         if not config.CV.check_series: return None
 
-        try:
-            results = _cvSession.search(resource=simyan.comicvine.ComicvineResource.VOLUME,query=name,max_results=MAX_RESULTS)
-            results = self.convertSeriesResultsToDict(results, resultsType)
-        except Exception as e:
-            printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
+        #try:
+        results = _cvSession.search(resource=simyan.comicvine.ComicvineResource.VOLUME,query=name,max_results=MAX_RESULTS)
+        results = self.convertSeriesResultsToDict(results, resultsType)
+        #except Exception as e:
+        #    printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
 
         return results
 
 
-    def getSeriesDetails(self, seriesID : str) -> list[dict]:
+    def getSeriesFromSeriesID(self, seriesID : str) -> list[dict]:
         results = None
         resultsType = ComicInformationSource.ResultType.Series
 
         if not config.CV.check_series: return None
 
-        try:
-            results = _cvSession.volume(seriesID)
-            results = self.convertSeriesResultsToDict(results, resultsType)
-        except Exception as e:
-            printResults("CV Error: Unable to search for series [%s] : %s" % (seriesID, str(e)), 4)
+        #try:
+        results = _cvSession.volume(seriesID)
+        results = self.convertSeriesResultsToDict(results, resultsType)
+        #except Exception as e:
+        #    printResults("CV Error: Unable to search for series [%s] : %s" % (seriesID, str(e)), 4)
 
         return results
 
@@ -257,16 +260,16 @@ class CV(ComicInformationSource):
         ### Issue results required for series validation ###
         # if not config.CV.check_issues: return None
 
-        #try:
-        if seriesID is not None:
-            results = _cvSession.issue_list(params={"filter": "volume:%s" % (seriesID)})
-            resultsList = self.convertIssueResultsToDict(results, resultsType)
-            if resultsList is not None:
-                for result in resultsList:
-                    resultsDict[result['issueNum']] = result
+        try:
+            if seriesID is not None:
+                results = _cvSession.issue_list(params={"filter": "volume:%s" % (seriesID)})
+                resultsList = self.convertIssueResultsToDict(results, resultsType)
+                if resultsList is not None:
+                    for result in resultsList:
+                        resultsDict[result['issueNum']] = result
 
-        #except Exception as e:
-        #    printResults("CV Error: Unable to search for series issues using series ID [%s] : %s" % (seriesID,str(e)), 4)
+        except Exception as e:
+            printResults("CV Error: Unable to search for series issues using series ID [%s] : %s" % (seriesID,str(e)), 4)
         
 
         return resultsDict

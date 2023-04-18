@@ -108,7 +108,7 @@ class ComicInformationSource():
     # Responsible for looking up data from source and returning a list[dict] object of the relevant type (Series / Issue)
 
     _issueDetailsTemplate = {'issueID' : None, 'seriesID' : None, 'name' : None, 'coverDate' : None, 'issueNum': None, 'issueType' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
-    _seriesDetailsTemplate = {'seriesID': None, 'name' : None, 'startYear' : None, 'publisher' : None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
+    _seriesDetailsTemplate = {'seriesID': None, 'name' : None, 'startYear' : None, 'publisher' : None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'issueList' : None, 'dataSource' : None}
     _listDetailsTemplate = {'listID': None, 'name' : None, 'publisher' : None, 'issues': None, 'numIssues' : None, 'description' : None, 'summary' : None, 'dateAdded' : None, 'dataSource' : None}
 
     class IssueType(Enum):
