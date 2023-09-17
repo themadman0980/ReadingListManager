@@ -31,8 +31,7 @@ overrideMatchCounter = 0
 
 lookupMatch = {'match' : None, 'problemData' : None }
 
-CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl",
-    "Iron Man", "The Hulk", "Spider-Man", "Daredevil", "New Avengers", "Dark Avengers"]
+CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl"]
 
 _coreSeriesCollection = CoreSeriesCollection()
 

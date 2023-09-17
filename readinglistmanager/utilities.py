@@ -16,6 +16,7 @@ dynamicNameTemplate = '[^a-zA-Z0-9]'
 stop_words = ['the', 'a', 'and']
 yearStringCleanTemplate = '[^0-9]'
 cleanStringTemplate = '[^a-zA-Z0-9\:\-\(\) ]'
+seriesKeyOverrides = {'The Star Wars':'thestarwars'}
 
 
 def getCurrentTimeStamp():
@@ -78,13 +79,16 @@ def stripSymbols(string):
 
 
 def getDynamicName(string):
-    string = str(string)
-    string = stripAccents(string.lower())
-    cleanString = " ".join([word for word in str(
-        string).split() if word not in stop_words])
-    cleanString = re.sub(dynamicNameTemplate, '', str(cleanString))
+    if string in seriesKeyOverrides:
+        return seriesKeyOverrides[string]
+    else:
+        string = str(string)
+        string = stripAccents(string.lower())
+        cleanString = " ".join([word for word in str(
+            string).split() if word not in stop_words])
+        cleanString = re.sub(dynamicNameTemplate, '', str(cleanString))
 
-    return cleanString
+        return cleanString
 
 
 def hasValidEncoding(string):

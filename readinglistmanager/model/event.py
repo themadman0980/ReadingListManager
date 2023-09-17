@@ -26,7 +26,7 @@ class Event(RelationshipList):
 
     def getTitle(self):
         if self.type == Event.EventType.ReadingList:
-            return "%s" % self.sourceObject.title
+            return self.sourceObject.getFileName()
         else:
             return self.issueRange.issueRangeString
         

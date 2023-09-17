@@ -11,6 +11,8 @@ from readinglistmanager.model.event import Event
 
 readingListCounter = readingListVizCounter = 1
 readingListPUMLTracker = readingListVizTracker = dict()
+graphVizColourList = ["red",'blue','black','cyan', 'green','purple','orange']
+curColourIndex = 0
 
 class Series:
 
@@ -385,10 +387,24 @@ class CoreSeries(Series):
         return textLines
 
     def getEventRelationshipGraphVizString(self):
+        
+        #Get next colour in list
+        global curColourIndex
+
+        if curColourIndex == len(graphVizColourList):
+            curColourIndex = 0
+
+        curListColour = graphVizColourList[curColourIndex]
+        curColourIndex += 1
+
+        # Create new subgraph for CoreSeries
         textLines = list()
         textLines.append('  subgraph cluster_%s{' % (str(self.series.key).replace("-","_")))
         textLines.append('      label = \"%s\";' % (self.series.title))
+        textLines.append('      color = \"%s\";' % (curListColour))
+        textLines.append('      edge [color = \"%s\";];' % (curListColour))
         textLines.append('')
+
 
         eventDetailsList = dict()
         seriesPackageList = list()
@@ -407,6 +423,7 @@ class CoreSeries(Series):
                 classTitle = eventsList[i].getTitle()
 
                 if classTitle in readingListVizTracker:
+                    #className = None
                     className = readingListVizTracker[classTitle]['className']
                 else:
                     className = "reading_list_%s" % readingListVizCounter
@@ -423,12 +440,13 @@ class CoreSeries(Series):
                 className = "%s%s" % (self.series.key.replace('-','_'), i)
                 classTitle = eventsList[i].getTitle()
 
-            eventDetailsList[eventsList[i]] = {
-                'classTitle': classTitle,
-                'className': className,
-                'event' : eventsList[i],
-                'coreSeries' : self
-            }
+            if className is not None:
+                eventDetailsList[eventsList[i]] = {
+                    'classTitle': classTitle,
+                    'className': className,
+                    'event' : eventsList[i],
+                    'coreSeries' : self
+                }
         
         #Add in hidden relationship with next event in current series
         #prevEvent = None
@@ -452,7 +470,7 @@ class CoreSeries(Series):
             if curClassTitle in readingListVizTracker and readingListVizTracker[curClassTitle]['event'].type == Event.EventType.ReadingList:
                 # Only add class if the coreSeries for the reading list is this one!
                 if readingListVizTracker[curClassTitle]['coreSeries'] == self:
-                    propertiesString = " shape=\"oval\";" if readingListVizTracker[curClassTitle]['coreSeries'] == self else ""
+                    propertiesString = " shape=\"oval\"; color=\"%s\"" % (curListColour) if readingListVizTracker[curClassTitle]['coreSeries'] == self else ""
                 else:
                     # Event is not based in current coreSeries!
                     # Don't add label
@@ -551,7 +569,8 @@ class CoreSeriesCollection():
         stringData = [
             "digraph {",
             "   rankdir = TB;",
-            "   splines=false;",
+            "   splines=ortho;",
+            "   newrank=true;",
             "   ranksep=0.5;",
             "   nodesep=0.5;",
             "   node [shape=\"rect\";];"
