@@ -1,7 +1,8 @@
 .vscode/
 readinglistmanager-OLD
 __pycache__
-ReadingLists/*
+ReadingLists/CBL/*
+ReadingLists/TXT/*
 Results/*
 Output/*
 Data/*
