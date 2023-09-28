@@ -108,7 +108,7 @@ def saveVizGraphFile(stringData : str):
     saveDataList(filemanager.vizGraphFile, stringData, True, OutputFileType.DOT)
 
 def getReadingListOutputDirectory(readingList: ReadingList, outputFileType: OutputFileType) -> str:
-    originFolder = filemanager.readingListDirectory
+    originFolder = filemanager.cblReadingListImportDirectory
     destFolder = outputFileType.getDirectory()
 
     if isinstance(readingList.source, Source):

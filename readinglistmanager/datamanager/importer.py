@@ -19,14 +19,14 @@ def parseCBLfiles():
 
     readingLists = []
     fileCount = 0
-    for root, dirs, files in os.walk(filemanager.readingListDirectory):
+    for root, dirs, files in os.walk(filemanager.cblReadingListImportDirectory):
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
                 fileCount += 1
 
     processedFileCount = 0
-    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.readingListDirectory), 2)
-    for root, dirs, files in os.walk(filemanager.readingListDirectory):
+    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.cblReadingListImportDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.cblReadingListImportDirectory):
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
                 #try:
@@ -100,6 +100,86 @@ def parseCBLfiles():
 
                     readingList.addIssue(i, curIssue)
                     curIssue.addReadingListRef(readingList)
+
+                if len(readingList.issueList) == 0:
+                    printResults(
+                        "Warning: No issues found for list : %s" % (file), 4)
+
+                readingLists.append(readingList)
+                #except Exception as e:
+                #    printResults("Unable to process file at %s : %s" %
+                #                 (os.path.join(str(root), str(file)), str(e)), 3)
+
+    return readingLists
+
+def parseTXTfiles():
+
+    readingLists = []
+    fileCount = 0
+    for root, dirs, files in os.walk(filemanager.textReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".txt") and not file.startswith('._'):
+                fileCount += 1
+
+    processedFileCount = 0
+    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.textReadingListImportDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.textReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".txt") and not file.startswith('._'):
+                #try:
+                curFilename = file
+                curFilePath = os.path.join(root, file)
+                # print("Parsing %s" % (filename))
+                string = open(curFilePath,"r").read()
+                splitString = string.split('\n')
+                processedFileCount += 1
+
+                listSource = datasource.Source(curFilename, curFilePath, datasource.ListSourceType.TXT)
+
+                readingList = ReadingList(source = listSource)
+
+                i = 1
+                if config.Troubleshooting.verbose:
+                    printResults("Updating issue data for reading list : %s [%s]" % (
+                        readingList.name, readingList.source.type.value), 3)
+
+                for entry in splitString:
+                    match = utilities.parseStringIssueList(entry)
+                    if match is not None:
+                        printResults("[%s / %s] Processing %s" % (processedFileCount, fileCount, i),4,False,True)
+                                            
+                        seriesName = match['Series']
+                        seriesStartYear = utilities.getCleanYear(match['Year'])
+                        firstIssueNumber = int(match['FirstIssueNum'])
+                        lastIssueNumber = int(match['LastIssueNum'])
+                        
+                        essentialFields = (seriesName, seriesStartYear, firstIssueNumber)
+                        discardValues = [None, "", " "]
+                        problem = False
+
+                        for field in essentialFields:
+                            if field in discardValues:
+                                curProblemEntries += 1
+                                problem = True
+
+                        if problem:
+                            continue
+
+                        seriesID = issueID = None
+
+                        issueNumList = list()
+                        issueNumList.append(firstIssueNumber)
+                        if lastIssueNumber is not None:
+                            lastIssueNumber = int(lastIssueNumber)
+                        for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
+                            issueNumList.append(curIssueNum)
+                      
+                        for issueNumber in issueNumList:
+                            curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
+                            curIssue.addReadingListRef(readingList)
+
+                            i += 1
+                            readingList.addIssue(i, curIssue)
 
                 if len(readingList.issueList) == 0:
                     printResults(

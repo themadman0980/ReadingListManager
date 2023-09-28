@@ -10,5 +10,5 @@ class.puml
 !Output/CBL/CBL/Example.cbl
 !Data/SeriesOverrides.json
 !Data/views.txt
-!ReadingLists/Example.cbl
+!ReadingLists/CBL/Example.cbl
 *.DS_Store

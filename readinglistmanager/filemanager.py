@@ -9,7 +9,8 @@ _timeString = datetime.today().strftime("%y%m%d%H%M%S")
 rootDirectory = os.getcwd()
 #rootDirectory = os.path.dirname(rootDirectory)
 dataDirectory = os.path.join(rootDirectory, "Data")
-readingListDirectory = os.path.join(rootDirectory, "ReadingLists")
+cblReadingListImportDirectory = os.path.join(rootDirectory, "ReadingLists","CBL")
+textReadingListImportDirectory = os.path.join(rootDirectory, "ReadingLists","TXT")
 resultsDirectory = os.path.join(rootDirectory, "Results")
 outputDirectory = os.path.join(rootDirectory, "Output")
 jsonOutputDirectory = os.path.join(outputDirectory, "JSON")
@@ -30,7 +31,8 @@ def checkDirectories():
 
     directories = [
         dataDirectory,
-        readingListDirectory,
+        cblReadingListImportDirectory,
+        textReadingListImportDirectory,
         resultsDirectory,
         outputDirectory,
         jsonOutputDirectory,

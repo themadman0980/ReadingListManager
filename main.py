@@ -18,7 +18,9 @@ def main():
     readingLists = []
 
     if config.Troubleshooting.process_cbl:
-        readingLists = importer.parseCBLfiles()
+        readingLists += importer.parseCBLfiles()
+
+    readingLists += importer.parseTXTfiles()
 
     if config.Troubleshooting.process_web_dl:
         readingLists += importer.getOnlineLists()

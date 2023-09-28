@@ -324,7 +324,6 @@ def cleanFileName(orig_name: str):
 
     return fixed_name
 
-
 def confirmMylarImports() -> bool:
     yes = {'yes','y', 'ye'}
     no = {'no','n'}
@@ -335,3 +334,15 @@ def confirmMylarImports() -> bool:
         return True
     else:
         return False
+
+def parseStringIssueList(entry: str):
+    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\) *#(?P<FirstIssueNum>\d)(?:\-(?P<LastIssueNum>\d+))$'
+    issueListDetails = None
+
+    if isinstance(entry,str) and entry not in [None,""]: 
+        match = re.search(issueListPattern, entry, re.IGNORECASE)
+        if match:
+            issueListDetails = match.groupdict()
+
+    return issueListDetails
+

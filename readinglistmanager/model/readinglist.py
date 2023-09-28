@@ -193,7 +193,7 @@ class ReadingList():
                 self.name = listName
             # elif filePath is not None:
             #    self.name = filePath
-            elif isinstance(source, Source) and self.source.type == ListSourceType.CBL:
+            elif isinstance(source, Source) and self.source.type in [ListSourceType.CBL,ListSourceType.TXT]:
                 self._getNameFromFile(self.source.file)
 
             if self.source is not None and isinstance(self.source, Source):

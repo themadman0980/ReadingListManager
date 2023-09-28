@@ -77,6 +77,7 @@ class ListSourceType(DataSourceType):
     Website = "WEB"
     CBL = "CBL"
     CV = "CV"
+    TXT = "TXT"
 
 class Source:
     def __init__(self, name : str, file : str, sourceType : DataSourceType = None, tableDict : dict = None):
