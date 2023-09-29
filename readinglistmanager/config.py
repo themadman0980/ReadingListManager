@@ -13,6 +13,7 @@ configDict = {
         'check_arcs': True,
         'check_series': True,
         'check_issues': True,
+        'cache_searches': True,
         'api_key': 'API_KEY_HERE',
         'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Abril", "Ediciones Zinco", "Dino Comics", "Unknown"],
         'publisher_preferred': ["Marvel", "DC Comics"],
@@ -93,6 +94,8 @@ class CV():
     else:
         #Turn off all CV searching due to missing key
         check_arcs = check_series = check_issues = False
+
+    cache_searches = getConfigOption('cache_searches', sectionName, bool, True)
 
     publisher_blacklist = getConfigOption('publisher_blacklist', sectionName, list, list())
     publisher_preferred = getConfigOption('publisher_preferred', sectionName, list, list())

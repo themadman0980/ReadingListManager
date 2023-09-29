@@ -13,7 +13,10 @@ from simyan.sqlite_cache import SQLiteCache
 CACHE_RETENTION_TIME = 60 #days
 MAX_RESULTS = 100
 
-_cvSession = simyan.comicvine.Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(filemanager.cvCacheFile,CACHE_RETENTION_TIME))
+if config.CV.cache_searches:
+    _cvSession = simyan.comicvine.Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(filemanager.cvCacheFile,CACHE_RETENTION_TIME))
+else:
+    _cvSession = simyan.comicvine.Comicvine(api_key=config.CV.api_key)
 
 class CV(ComicInformationSource):
     instance = None
