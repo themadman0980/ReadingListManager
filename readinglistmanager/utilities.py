@@ -168,15 +168,9 @@ def getCleanYear(string):
         return cleanString
 
 
-def padNumber(number):
-    if number < 10:
-        return '000' + str(number)
-    elif number < 100:
-        return '00' + str(number)
-    elif number < 1000:
-        return '0' + str(number)
-    else:
-        return number
+def padNumber(number, numElements):
+    # Adds leading 0's to a number in string format
+    return str(number).zfill(numElements)
 
 
 def os_path_separators():
@@ -336,13 +330,23 @@ def confirmMylarImports() -> bool:
         return False
 
 def parseStringIssueList(entry: str):
-    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\) *#(?P<FirstIssueNum>\d)(?:\-(?P<LastIssueNum>\d+))$'
+    #seriesPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\) *'
+    #patterns = [
+    #    seriesPattern + r'#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))$',
+    #    seriesPattern + '$',
+    #]
+
+    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+)))?$'
     issueListDetails = None
 
-    if isinstance(entry,str) and entry not in [None,""]: 
-        match = re.search(issueListPattern, entry, re.IGNORECASE)
-        if match:
-            issueListDetails = match.groupdict()
+    match = re.search(issueListPattern, entry, re.IGNORECASE)
 
-    return issueListDetails
+    return match.groupdict()
+    
+    #if isinstance(entry,str) and entry not in [None,""]: 
+    #    for pattern in patterns:
+#
+    #        if match:
+#
+    #return issueListDetails
 

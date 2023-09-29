@@ -111,6 +111,16 @@ class Issue:
 
         return None
 
+    def getIssueReleaseDateString(self):
+
+        releaseDate = self.coverDateString
+
+        if releaseDate in [None,""]:
+            if self.sourceDate is not None and isinstance(self.sourceDate, PublicationDate):
+                releaseDate = self.sourceDate.getString()
+
+        return releaseDate
+
     def coverDateString():
         doc = "The issue's coverdate in String format"
 

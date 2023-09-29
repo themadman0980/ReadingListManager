@@ -123,6 +123,8 @@ class Series:
                 #    issue.updateDetailsFromDict(issueDetailsDict[issue.issueNumber])
 
     def getIssueNumsList(self):
+        for issueNum in self.issueList.keys():
+            self._issueNums.add(issueNum)
         return sorted(self._issueNums)
 
     def hasValidID(self):

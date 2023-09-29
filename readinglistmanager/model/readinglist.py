@@ -270,6 +270,30 @@ class ReadingList():
         self.problems[problemType] = extraData
 
     @classmethod
+    def sortListsByReleaseDate(self,readingLists : list):
+        if isinstance(readingLists, list):
+            for readingList in readingLists:
+                readingList.sortListByReleaseDate()
+
+    def sortListByReleaseDate(self):
+        if self.source is not None and self.source.type is ListSourceType.TXT:
+            # Sort issue list by datestamp
+            originalIssueList = list(self.issueList.values())
+            sortedIssueList = sorted(originalIssueList,key=lambda x: x.getIssueReleaseDateString())
+
+            # Create numbered dict
+            sortedIssueDict = dict()
+            i=0
+
+            for issueEntry in sortedIssueList:
+                i+=1
+                sortedIssueDict[i] = issueEntry
+
+            # Update readinglist issue list
+            self.issueList = sortedIssueDict
+
+
+    @classmethod
     def fromDict(self, matchData: dict, listType: ListSourceType) -> 'ReadingList':
         listSource = Source(matchData['name'], None, listType)
         curList = ReadingList(

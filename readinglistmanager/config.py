@@ -24,10 +24,11 @@ configDict = {
     },
     'Export': {
         'preserve_file_structure' : False,
+        'sort_generated_by_release_date' : False
     },
     'Troubleshooting' : {
-        'process_cbl': True,
-        'process_web_dl': False,
+        'process_files': True,
+        'process_web_db': False,
         'verbose': False,
     }
 }
@@ -114,10 +115,11 @@ class Export():
     sectionName = 'Export'
 
     preserve_file_structure = getConfigOption('preserve_file_structure', sectionName, bool, False)
+    sort_generated_by_release_date = getConfigOption('sort_generated_by_release_date', sectionName, bool, False)
 
 class Troubleshooting():
     sectionName = 'Troubleshooting'
 
-    process_cbl = getConfigOption('process_cbl', sectionName, bool, True)
-    process_web_dl = getConfigOption('process_web_dl', sectionName, bool, False)
+    process_files = getConfigOption('process_files', sectionName, bool, True)
+    process_web_db = getConfigOption('process_web_db', sectionName, bool, False)
     verbose = getConfigOption('verbose', sectionName, bool, False)

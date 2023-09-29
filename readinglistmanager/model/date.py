@@ -89,9 +89,10 @@ class PublicationDate:
 
     def getString(self):
         if self.type == PublicationDate.DateType.Day:
-            return "%s-%s-%s" % (self.year, self.month, self.day)
+
+            return "%s-%s-%s" % (self.year, utilities.padNumber(self.month,2), utilities.padNumber(self.day,2))
         elif self.type == PublicationDate.DateType.Month:
-            return "%s-%s" % (self.year, self.month)
+            return "%s-%s" % (self.year, utilities.padNumber(self.month,2))
         elif self.type == PublicationDate.DateType.Year:
             return "%s" % (self.year)
         else:

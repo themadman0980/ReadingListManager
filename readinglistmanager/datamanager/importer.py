@@ -150,8 +150,28 @@ def parseTXTfiles():
                                             
                         seriesName = match['Series']
                         seriesStartYear = utilities.getCleanYear(match['Year'])
-                        firstIssueNumber = int(match['FirstIssueNum'])
-                        lastIssueNumber = int(match['LastIssueNum'])
+                        firstIssueNumber = 1
+                        lastIssueNumber = None
+
+                        if 'FirstIssueNum' not in match or match['FirstIssueNum'] is None:
+                            # No issue numbers specified
+
+                            # Create series and validate
+                            curSeries = dataManager.getSeriesFromDetails(seriesName,seriesStartYear)
+                            dataManager._updateSeriesFromDataSources(curSeries)
+
+                            # Get issue list
+                            issueNums = curSeries.getIssueNumsList()
+                            issueNums.sort(key=lambda x: int(x))
+
+                            # Select last issue numbers
+                            numIssues = len(issueNums)
+                            if numIssues > 1:
+                                lastIssueNumber = int(issueNums[numIssues - 1])
+                        else:
+                            # Issue Numbers specified
+                            firstIssueNumber = int(match['FirstIssueNum'])
+                            lastIssueNumber = int(match['LastIssueNum'])
                         
                         essentialFields = (seriesName, seriesStartYear, firstIssueNumber)
                         discardValues = [None, "", " "]
@@ -171,9 +191,9 @@ def parseTXTfiles():
                         issueNumList.append(firstIssueNumber)
                         if lastIssueNumber is not None:
                             lastIssueNumber = int(lastIssueNumber)
-                        for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
-                            issueNumList.append(curIssueNum)
-                      
+                            for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
+                                issueNumList.append(curIssueNum)
+                    
                         for issueNumber in issueNumList:
                             curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
                             curIssue.addReadingListRef(readingList)
@@ -283,3 +303,4 @@ def getOnlineLists():
                     #    printResults("Error: Unable to process db file %s : %s" % (file,e),2)
 
     return onlineLists
+
