@@ -150,8 +150,7 @@ def parseTXTfiles():
                                             
                         seriesName = match['Series']
                         seriesStartYear = utilities.getCleanYear(match['Year'])
-                        firstIssueNumber = 1
-                        lastIssueNumber = None
+                        issueNumList = list()
 
                         if 'FirstIssueNum' not in match or match['FirstIssueNum'] is None:
                             # No issue numbers specified
@@ -161,19 +160,22 @@ def parseTXTfiles():
                             dataManager._updateSeriesFromDataSources(curSeries)
 
                             # Get issue list
-                            issueNums = curSeries.getIssueNumsList()
-                            issueNums.sort(key=lambda x: int(x))
+                            issueNumList = curSeries.getIssueNumsList()
+                            issueNumList.sort(key=lambda x: int(x))
 
-                            # Select last issue numbers
-                            numIssues = len(issueNums)
-                            if numIssues > 1:
-                                lastIssueNumber = int(issueNums[numIssues - 1])
                         else:
-                            # Issue Numbers specified
+                            # Issue numbers specified
                             firstIssueNumber = int(match['FirstIssueNum'])
-                            lastIssueNumber = int(match['LastIssueNum'])
-                        
-                        essentialFields = (seriesName, seriesStartYear, firstIssueNumber)
+                            issueNumList.append(firstIssueNumber)
+
+                            if match['LastIssueNum'] is not None:
+                                lastIssueNumber = int(match['LastIssueNum'])
+
+                                # Create list of numbers (assumes no gaps)
+                                for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
+                                    issueNumList.append(curIssueNum)
+
+                        essentialFields = (seriesName, seriesStartYear)
                         discardValues = [None, "", " "]
                         problem = False
 
@@ -187,13 +189,6 @@ def parseTXTfiles():
 
                         seriesID = issueID = None
 
-                        issueNumList = list()
-                        issueNumList.append(firstIssueNumber)
-                        if lastIssueNumber is not None:
-                            lastIssueNumber = int(lastIssueNumber)
-                            for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
-                                issueNumList.append(curIssueNum)
-                    
                         for issueNumber in issueNumList:
                             curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
                             curIssue.addReadingListRef(readingList)

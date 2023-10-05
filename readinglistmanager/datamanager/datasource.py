@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from abc import abstractmethod
-from readinglistmanager.utilities import printResults
+from readinglistmanager.utilities import printResults, isValidID
 import os
 import requests
 from html import unescape
 from enum import Enum
+from copy import deepcopy
 
 class DataSourceType(Enum):
     pass
@@ -77,6 +78,7 @@ class ListSourceType(DataSourceType):
     Website = "WEB"
     CBL = "CBL"
     CV = "CV"
+    Metron = "Metron"
     TXT = "TXT"
 
 class Source:
@@ -142,7 +144,8 @@ class ComicInformationSource():
     class SourceType(DataSourceType):
         # Identifies the source of truth this information was obtained from
         Manual = "Manual"
-        Comicvine = "Comicvine"
+        Comicvine = "comicvine"
+        Metron = "metron"
         Database = "Database"
 
     class ResultType(Enum):
@@ -184,7 +187,7 @@ class ComicInformationSource():
     #    pass
 
     @abstractmethod
-    def getSeriesFromSeriesID(self, seriesID : str) -> list[dict]:
+    def getSeriesFromSeriesID(self, dataSourceType : "ComicInformationSource.SourceType", seriesID : str) -> list[dict]:
         pass
 
     @abstractmethod
@@ -192,7 +195,7 @@ class ComicInformationSource():
         pass
 
     @abstractmethod
-    def getIssuesFromSeriesID(self, seriesID : str) -> dict[dict]:
+    def getIssuesFromSeriesID(self, seriesID : str, source : "ComicInformationSource.SourceType") -> dict[dict]:
         pass
 
     @abstractmethod
@@ -248,3 +251,168 @@ class ComicInformationSource():
                 return ComicInformationSource.IssueType.Trade
             
         return ComicInformationSource.IssueType.Issue
+
+class WebSource():
+    #Used for keeping track of checks against comic information sources for a specific resource (issue, series, list etc)
+
+    def __init__(self, source : ComicInformationSource.SourceType):
+        self._name = source.value
+        self.type = source
+        self.checked = False
+        self.id = None
+
+    @property
+    def name(self):
+        return self._type.value
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        if isinstance(value, ComicInformationSource.SourceType):
+            self._type = value
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        validID = isValidID(value)
+        if value is None or validID:
+            self._id = value
+
+    @property
+    def checked(self):
+        return self._checked
+
+    @checked.setter
+    def checked(self, value):
+        if isinstance(value, bool):
+            self._checked = value
+
+
+class WebSourceList():
+    def __init__(self):
+        webSourcesManager = WebSourceManager.get()
+        if isinstance(webSourcesManager, WebSourceManager):
+            self._sourceList = webSourcesManager.getBlankSourceList()
+
+    def getSourcesList(self):
+        return list(self._sourceList.values())
+
+    def getSourcesJSON(self):
+        sourceIDs = list()
+
+        for source in self.getSourcesList():
+
+            if source.id is not None:
+                curSource = dict()
+                curSource['Name'] = source.name
+                curSource['ID'] = source.id
+
+                sourceIDs.append(curSource)
+
+        return sourceIDs
+
+    def hasSource(self, source: ComicInformationSource.SourceType):
+        if isinstance(source, ComicInformationSource.SourceType) and source in self._sourceList:
+            return True
+        else:
+            return False
+
+    def setSourceChecked(self,source: ComicInformationSource.SourceType):
+        if source in self._sourceList:
+            self._sourceList[source].checked = True
+
+    def isSourceChecked(self, source: ComicInformationSource.SourceType):
+        if source in self._sourceList:
+            return self._sourceList[source].checked
+        else:
+            return False
+
+    def getSourceID(self, source : ComicInformationSource.SourceType):
+        if source in self._sourceList:
+            return self._sourceList[source].id
+        else:
+            return None
+
+    def setSourceID(self, source : ComicInformationSource.SourceType, sourceID : str):
+        if source in self._sourceList:
+            self._sourceList[source].id = sourceID
+        
+        if sourceID is None:
+            pass
+
+    def allSourcesChecked(self) -> bool:
+        allSourcesChecked = True
+
+        for source in self._sourceList:
+            if isinstance(source, WebSource):
+                if not source.checked: 
+                    allSourcesChecked = False
+
+        return allSourcesChecked
+
+    def allSourcesMatched(self) -> bool:
+        if not self.allSourcesChecked(): 
+            return False
+
+        allSourcesMatched = True
+
+        for source in self.getSourcesList():
+            if isinstance(source, WebSource):
+                if source.id is None and source.name != "Database": 
+                    allSourcesMatched = False
+
+        return allSourcesMatched
+
+    def hasValidID(self, source : ComicInformationSource.SourceType = None):
+        if source is None:
+            for webSource in self._sourceList.values():
+                if webSource.id is not None:
+                    return True
+            
+            return False
+
+        elif source in self._sourceList and self._sourceList[source].id is not None:
+            return True
+        else:
+            return False
+            
+    def getSourceID(self, source: ComicInformationSource.SourceType):
+        if source in self._sourceList and source in WebSourceManager.WebSourceTypes:
+            return self._sourceList[source].id
+        else:
+            return None
+
+class WebSourceManager():
+    # Generates dict of WebSources for easy access and re-use by resources
+
+    instance = None
+    _sourceList = dict()
+
+    @classmethod
+    def get(self):    
+        if WebSourceManager.instance is None: 
+            WebSourceManager.instance = WebSourceManager()
+
+        return WebSourceManager.instance
+
+    # Needs to be updated for any new web data source
+    WebSourceTypes = [
+        ComicInformationSource.SourceType.Comicvine,
+        ComicInformationSource.SourceType.Metron    
+    ]
+
+    def __init__(self):
+        databaseSource = ComicInformationSource.SourceType.Database
+        self._sourceList[databaseSource] = WebSource(databaseSource)
+
+        for source in WebSourceManager.WebSourceTypes:
+            self._sourceList[source] = WebSource(source)
+
+    def getBlankSourceList(self):
+        return deepcopy(self._sourceList)

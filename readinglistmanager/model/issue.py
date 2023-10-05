@@ -4,9 +4,10 @@ from readinglistmanager.utilities import printResults
 from readinglistmanager import utilities
 from enum import Enum
 from readinglistmanager.model.date import PublicationDate
+from readinglistmanager.model.resource import Resource
+from readinglistmanager.datamanager.datasource import ComicInformationSource, WebSourceList
 
-
-class Issue:
+class Issue(Resource):
 
     def __init__(self, series, issueNumber : str, dataSourceType):
         if issueNumber is None:
@@ -14,7 +15,9 @@ class Issue:
         self.issueNumber = str(issueNumber)
         self.series = series
         self.listReferences = set()
-        self.id = None
+
+        self.sourceList = WebSourceList()
+
         self.year = None
         self.name = None
         self.sourceDate = None
@@ -22,7 +25,7 @@ class Issue:
         self.description = None
         self.summary = None
         self.issueType = None
-        self.sourceType = dataSourceType
+        self.mainDataSourceType = dataSourceType
         self.detailsFound = False
 
     #@classmethod
@@ -48,8 +51,22 @@ class Issue:
         return hash((self.series.dynamicName, self.series.startYear, self.issueNumber, self.id))
 
     # Check that issueID and seriesID exist
-    def hasValidID(self):
-        return utilities.isValidID(self.id)
+    #@classmethod
+    #def hasValidID(issue : Issue, source : ComicInformationSource.SourceType = None):
+    #    if source is None:
+    #        for webSource in issue.sourceList.values():
+    #            if utilities.isValidID(webSource.id):
+    #                return True
+    #        
+    #        return False
+    #
+    #    elif source in issue.sourceList:
+    #        return utilities.isValidID(issue.sourceList[source].id)
+    #    else:
+    #        return False
+    #
+    #def hasValidID(self, source : ComicInformationSource.SourceType = None):
+    #    return Issue.hasValidID(self, source)
 
     @classmethod
     def fromDict(self, match : dict):
@@ -66,13 +83,13 @@ class Issue:
     def updateDetailsFromDict(self, match : dict) -> None:
         # Populate attributes from _issueDetailsTemplate dict structure
         try:
-            self.id = match['issueID']
             self.name = match['name']
             self.setCoverDate(match['coverDate'])
             self.description = match['description']
             self.summary = match['summary']
             self.issueType = match['issueType']
-            self.sourceType = match['dataSource']
+            self.mainDataSourceType = match['dataSource']
+            self.setSourceID(match['dataSource'],match['issueID'])
             self.detailsFound = True
         except Exception as e:
             if self.series is not None: 
@@ -134,8 +151,7 @@ class Issue:
 
     def getDBDict(self) -> dict:
         data = {
-            'issueID': self.id, 
-            'seriesID': self.series.id, 
+            'Database': self._getSourceIDs(), 
             'name': self.name, 
             'coverDate': self.coverDateString, 
             'issueNum': self.issueNumber, 
@@ -150,12 +166,8 @@ class Issue:
             'IssueNum': self.issueNumber,
             'IssueType': None,
             'CoverDate': self.coverDateString,
-            'Database': {
-                'Name':'Comicvine',
-                'SeriesID': self.series.id, 
-                'IssueID': self.id
-                }
-            }
+            'Database': self.sourceList.getSourcesJSON()
+            }            
 
         if self.issueType is not None:
             data.update({'IssueType': self.issueType.value})

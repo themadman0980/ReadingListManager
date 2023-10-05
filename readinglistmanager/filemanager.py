@@ -18,6 +18,7 @@ cblOutputDirectory = os.path.join(outputDirectory, "CBL")
 
 dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
+metronCacheFile = os.path.join(dataDirectory, "metron.db")
 overridesFile = os.path.join(dataDirectory,'SeriesOverrides.json')
 configFile = os.path.join(rootDirectory, 'config.ini')
 resultsFile = os.path.join(resultsDirectory, "results-%s.txt" % (_timeString))
