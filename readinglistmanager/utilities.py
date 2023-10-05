@@ -105,6 +105,9 @@ def fixEncoding(string):
 
 
 def isValidID(ID):
+    if isinstance(ID, int):
+        pass
+    
     if ID is not None:
         isDigit = isNumber(ID)
         return isDigit
@@ -336,17 +339,19 @@ def parseStringIssueList(entry: str):
     #    seriesPattern + '$',
     #]
 
-    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+)))?$'
+    entry = entry.strip()
+    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))?)? *$'
     issueListDetails = None
 
     match = re.search(issueListPattern, entry, re.IGNORECASE)
 
-    return match.groupdict()
-    
-    #if isinstance(entry,str) and entry not in [None,""]: 
-    #    for pattern in patterns:
-#
-    #        if match:
-#
-    #return issueListDetails
+    return match.groupdict() if match is not None else None
 
+def stripYearFromName(string : str):
+    if isinstance(string, str):
+        return str(re.sub(r'\(\d{4}\)','',string)).strip()
+    else:
+        return None
+
+def scrubSQLVariable(string : str):
+    return ''.join( chr for chr in string if chr.isalnum() or chr in ('_') )

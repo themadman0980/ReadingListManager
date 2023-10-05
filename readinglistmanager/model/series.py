@@ -4,6 +4,7 @@
 from readinglistmanager import utilities
 from readinglistmanager.utilities import printResults
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.resource import Resource
 from readinglistmanager.model.issueRange import IssueRange, IssueRangeCollection
 from readinglistmanager.datamanager.datasource import ComicInformationSource
 from readinglistmanager.model.relationshipList import RelationshipList
@@ -14,7 +15,7 @@ readingListPUMLTracker = readingListVizTracker = dict()
 graphVizColourList = ["red",'blue','black','cyan', 'green','purple','orange']
 curColourIndex = 0
 
-class Series:
+class Series(Resource):
 
     @classmethod
     def getSeriesKey(self, seriesName, seriesStartYear):
@@ -26,7 +27,6 @@ class Series:
     def updateDetailsFromDict(self, match : dict) -> None:
         # Populate attributes from _seriesDetailsTemplate dict structure
         try:
-            self.id = match['seriesID']
             #self.name = match['name']
             #self.startYear = match['startYear']
             self.publisher = match['publisher']
@@ -36,6 +36,8 @@ class Series:
             self.description = match['description']
             self.summary = match['summary']
             self.detailsFound = True
+            self.mainDataSourceType = match['dataSource']
+            self.setSourceID(match['dataSource'],str(match['seriesID']))
         except Exception as e:
             printResults("Unable to update series \'%s (%s)\' from match data : %s" % (self.name, self.startYear, match),4)
 
@@ -50,28 +52,31 @@ class Series:
             return utilities.getCleanYear(startYear)
 
     def __init__(self, seriesName, seriesStartYear):
+        super().__init__()
         self._name = None
         self.dynamicName = None
         self.startYear = Series.getCleanStartYear(seriesStartYear)
         self.name = seriesName
         self.publisher = None
-        self.id = None
         self.numIssues = None
         self.dateAdded = None
         self.issueList = dict()
         self.problems = dict()
         self._issueNums = set()
-        self.dataSourceType = ComicInformationSource.SourceType.Manual
-        self.checked = dict()
+        self.mainDataSourceType = ComicInformationSource.SourceType.Manual
         self.detailsFound = False
         self.altSeriesKeys = list()
 
     def __eq__(self, other):
         if (isinstance(other, Series)):
-            if self.id and other.id:
-                return self.id == other.id
-            else:
-                return self.dynamicName == other.dynamicName and self.startYear == other.startYear
+            if series.hasValidID() and other.hasValidID():
+                for dataSource in series.sourceList.getSourcesList():
+                    if datasource.id is not None and other.sourceList.getID(dataSource.type) is not None:
+                        return datasource.id == other.sourceList.getID(dataSource.type)
+
+            #If not matches found among database ID's, match based on name/year combo
+            return self.dynamicName == other.dynamicName and self.startYear == other.startYear
+        
         return False
 
     def __hash__(self):
@@ -126,9 +131,6 @@ class Series:
         for issueNum in self.issueList.keys():
             self._issueNums.add(issueNum)
         return sorted(self._issueNums)
-
-    def hasValidID(self):
-        return utilities.isValidID(self.id)
 
     def hasCompleteSeriesDetails(self):
         if self.hasValidID() and None not in (self.name, self.startYear, self.publisher, self.numIssues):
@@ -193,7 +195,7 @@ class Series:
 
     def getDict(self):
         data = {
-            'seriesID': self.id, 
+            'Database': self.sourceList.getSourcesJSON(),
             'name': self.name, 
             'dynamicName': self.dynamicName, 
             'startYear': self.startYear, 
@@ -215,12 +217,6 @@ class CoreSeries(Series):
     def __getattr__(self, attr):
         return getattr(self.series, attr)
     
-    def getID(self):
-        if self.series.hasValidID():
-            return self.series.id
-        
-        return None
-
     def addReadingListReference(self, readingList : str, issueNum : str):
         if issueNum == ".":
             pass

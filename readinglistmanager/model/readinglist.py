@@ -9,11 +9,11 @@ from readinglistmanager.model.issue import Issue
 from readinglistmanager.model.issueRange import IssueRange, IssueRangeCollection
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.date import PublicationDate
-from readinglistmanager.datamanager.datasource import Source, ListSourceType
+from readinglistmanager.datamanager.datasource import Source, ListSourceType, ComicInformationSource
 from readinglistmanager import config, filemanager, utilities
+from readinglistmanager.model.resource import Resource
 
-
-class ReadingList():
+class ReadingList(Resource):
 
     #    @classmethod
     #    def printSummaryResults(self, readingLists):
@@ -51,8 +51,9 @@ class ReadingList():
                 if issue.hasValidID() or (isinstance(issue.series, Series) and issue.series.hasValidID()):
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (
                         seriesName, issueNum, issue.series.startYear, issue.getYear()))
-                    lines.append(
-                        "<Database Name=\"cv\" Series=\"%s\" Issue=\"%s\" />" % (issue.series.id, issue.id))
+                    for source in issue.sourceList.getSourcesList():
+                        if source.id is not None and source.type is not ComicInformationSource.SourceType.Database:
+                            lines.append("<Database Name=\"%s\" Series=\"%s\" Issue=\"%s\" />" % (source.name, issue.series.getSourceID(source.type), source.id))
                     lines.append("</Book>")
                 else:
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" %
@@ -176,6 +177,7 @@ class ReadingList():
         self.publisher = curPublisher
 
     def __init__(self, source: Source, listName=None, listID=None):
+        super().__init__()
         try:
             self.source = source
             self._name = None
@@ -336,24 +338,24 @@ class ReadingList():
         if self.publisher is not None:
             fileName.append("[%s]" % self.publisher)
 
-        if self.startYear is not None:
-            fileName.append("(%s)" % self.startYear)
+        #if self.startYear is not None:
+        #    fileName.append("(%s)" % self.startYear)
 
         fileName.append("%s" % (str(self.name)))
 
         if self.part is not None:
             fileName.append("Part #%s" % str(self.part))
 
-        sourceName = self.getSourceName()
-        if self._sourceNameOverride is not None:
-            # String override in effect for WEB source
-            sourceString = "WEB-%s" % (sourceName)
-            fileName.append("(%s)" % sourceString)
-        elif isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
-            sourceString = self.source.type.value
-            if self.source.type == ListSourceType.Website:
-                sourceString += '-%s' % self.source.name
-            fileName.append("(%s)" % sourceString)
+        #sourceName = self.getSourceName()
+        #if self._sourceNameOverride is not None:
+        #    # String override in effect for WEB source
+        #    sourceString = "WEB-%s" % (sourceName)
+        #    fileName.append("(%s)" % sourceString)
+        #elif isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
+        #    sourceString = self.source.type.value
+        #    if self.source.type == ListSourceType.Website:
+        #        sourceString += '-%s' % self.source.name
+        #    fileName.append("(%s)" % sourceString)
 
         return " ".join(fileName)
 
@@ -375,7 +377,7 @@ class ReadingList():
                 if 'partNumber' in cleanName:
                     self.part = cleanName['partNumber']
 
-            self._name = cleanName['listName']
+            self._name = str(cleanName['listName']).strip()
 
             #Update source type from CBL to WEB if filename indicates WEB source
             if self.source.type == ListSourceType.CBL and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
