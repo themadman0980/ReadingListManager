@@ -84,10 +84,16 @@ class ReadingList(Resource):
             database = {'Name': 'Comicvine', 'ID': self.id}
             listData['Database'].append(database)
 
-        listData['Issues'] = dict()
-        for number, issue in self.issueList.items():
+        issueData = list()
+
+        for issue in self.issueList.values():
             if isinstance(issue, Issue):
-                listData['Issues'][str(number)] = issue.getJSONDict()
+                issueData.append(issue.getJSONDict())
+
+        #listData['Issues'] = dict()
+        #for number, issue in self.issueList.items():
+        #    if isinstance(issue, Issue):
+        #        listData['Issues'][str(number)] = issue.getJSONDict()
 
         return listData
 
@@ -293,6 +299,7 @@ class ReadingList(Resource):
 
             # Update readinglist issue list
             self.issueList = sortedIssueDict
+
 
 
     @classmethod

@@ -101,7 +101,10 @@ class Metron(ComicInformationSource):
             publisher = result.publisher.name if result.publisher is not None else None
             issueList = self.getIssuesFromSeriesID(result.id, self.type) if hasattr(result, 'id') else None
             issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.IssueList) if issueList is not None else None
-            name = stripYearFromName(result.display_name)
+            if hasattr(result, 'display_name'):
+                name = stripYearFromName(result.display_name)
+            else:
+                name = result.name
             #issueList = self.convertIssueResultsToDict(volumeResults, ComicInformationSource.ResultType.IssueList) if hasattr(volumeResults, 'issues') else None
             seriesDetails.update({
                 'seriesID': str(result.id), 

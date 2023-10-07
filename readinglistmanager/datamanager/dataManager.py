@@ -209,7 +209,7 @@ def validateSeries() -> None:
                 printResults("%s / %s series checked" % (i,numSeries),4,False,True)
                 _updateSeriesFromDataSources(series,sourceType)
 
-            if not series.hasCompleteSeriesDetails():
+            if not series.allSourcesMatched():
                 checkWebSeriesSet.add(series)
     
     numSeriesLookupWeb = len(checkWebSeriesSet)
@@ -223,12 +223,12 @@ def validateSeries() -> None:
     unmatchedWebSet = set()
     i = 0
     for series in checkWebSeriesSet:
+        i += 1
         for source in activeWebSources:
             if isinstance(series, Series) and not series.sourceList.isSourceChecked(source.type):
-                i += 1
-                printResults("[%s / %s] : Checking web for %s (%s) [%s]" % (i, numSeriesLookupWeb, series.name, series.startYear, series.sourceList.getSourceID(source.type)), 4, False, True)
+                printResults("[%s / %s] : Checking %s for %s (%s) [%s]" % (i, numSeriesLookupWeb, source.type.value, series.name, series.startYear, series.sourceList.getSourceID(source.type)), 4, False, True)
                 _updateSeriesFromDataSources(series,source.type)
-                if not series.hasValidID(): 
+                if not series.hasValidID(source.type): 
                     unmatchedWebSet.add(series)
     
     numSeriesUnmatchedWeb = len(unmatchedWebSet)
@@ -239,7 +239,7 @@ def validateSeries() -> None:
     for series in unmatchedWebSet:
         i += 1
         if isinstance(series, Series):
-            printResults("[%s / %s] : Reprocessing %s (%s) [%s]" % (i, numSeriesUnmatchedWeb, series.name, series.startYear, series.id), 4, False, True)
+            printResults("[%s / %s] : Reprocessing %s (%s)" % (i, numSeriesUnmatchedWeb, series.name, series.startYear), 4, False, True)
             counter['processed'] += 1
             cleanedSeriesName = utilities._cleanSeriesName(series.name)
             if cleanedSeriesName != series.name:
@@ -426,18 +426,18 @@ def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInforma
         return None
 
     for dataSource in activeDataSources:
-        if isinstance(dataSource, ComicInformationSource):
+        if (checkDataSource is not None 
+            and isinstance(checkDataSource, ComicInformationSource.SourceType) 
+            and dataSource.type is not checkDataSource):
+                continue
+
+        if isinstance(dataSource.type, ComicInformationSource.SourceType):
             if dataSource.type == ComicInformationSource.SourceType.Database:
                 #Different process for database lookups (need one lookup for each webSource type)
                 for webDataSource in activeWebSources:
                     #Check database for match against each web data source
                     _updateSeriesFromDataSource(series, dataSource, webDataSource.type)
-            else:
-
-                if checkDataSource is not None and dataSource.type is not checkDataSource:
-                    # Skip unwanted datasource if specific dataSource is specified in request
-                    continue
-                
+            else:                
                 #Check web data source if desired
                 _updateSeriesFromDataSource(series, dataSource)
 
@@ -450,14 +450,17 @@ def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInforma
 
 def _updateSeriesFromDataSource(series : Series, dataSource, dataSourceLookupType : ComicInformationSource.SourceType = None) -> None:
     # Check dataSource for match
-    if isinstance(series, Series) and series.hasValidID(dataSourceLookupType):
-        seriesResults = dataSource.getSeriesFromSeriesID(dataSourceLookupType, series.getSourceID(dataSourceLookupType))
-    else:
-        if dataSource.type == ComicInformationSource.SourceType.Database:
-            #Need to pass lookup type if using database
-            seriesResults = dataSource.getSeriesFromDetails(series.name, series.startYear, dataSourceLookupType)
+    if isinstance(series, Series):
+        if dataSourceLookupType is not None and series.hasValidID(dataSourceLookupType):
+            seriesResults = dataSource.getSeriesFromSeriesID(dataSourceLookupType, series.getSourceID(dataSourceLookupType))
+        elif series.hasValidID(dataSource.type):
+            seriesResults = dataSource.getSeriesFromSeriesID(dataSource.type, series.getSourceID(dataSource.type))
         else:
-            seriesResults = dataSource.getSeriesFromDetails(series.name, series.startYear)
+            if dataSource.type == ComicInformationSource.SourceType.Database:
+                #Need to pass lookup type if using database
+                seriesResults = dataSource.getSeriesFromDetails(series.name, series.startYear, dataSourceLookupType)
+            else:
+                seriesResults = dataSource.getSeriesFromDetails(series.name, series.startYear)
 
     series.sourceList.setSourceChecked(dataSource.type)
     
@@ -508,7 +511,7 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
 
                 if isinstance(dataSource, ComicInformationSource):
                     seriesIssues = dataSource.getIssuesFromSeriesID(seriesResult['seriesID'], seriesResult['dataSource'])
-                    series.sourceList.setSourceChecked(dataSource.type)
+                    #series.sourceList.setSourceChecked(dataSource.type)
 
                 # Check if issue results exist
                 if seriesIssues is not None and len(seriesIssues) > 0:
@@ -582,14 +585,9 @@ def _addReadingList(readingList : ReadingList) -> None:
                 else :
                     _readingLists[source.type][source.id] = [readingList]
 
-def createNewSeries(name : str, startYear : int, seriesID : str = None) -> Series :
+def createNewSeries(name : str, startYear : int) -> Series :
+
     newSeries = Series(name, startYear)
-    newSeries.id = seriesID
-
-    #for dataSource in activeDataSources:
-    #    if isinstance(dataSource, ComicInformationSource) and dataSource.type in newSeries.sourceList:
-    #        newSeries.sourceList[dataSource.type] = False
-
     _addSeriesToList(newSeries)
 
     return newSeries
@@ -622,27 +620,28 @@ def getIssueFromIssueID(dataSourceType : ComicInformationSource.SourceType, issu
 def _getSeriesIssueDetails(seriesObject : Series) -> None:
     if isinstance(seriesObject,Series) and seriesObject.hasValidID():
         for webSource in seriesObject.sourceList.getSourcesList():
-            #TODO: Allow prioritisation of data sources when multiple matches found
-            for dataSource in activeDataSources:
-                if isinstance(dataSource,ComicInformationSource):
-                    issueDetailsList = dataSource.getIssuesFromSeriesID(seriesObject.id, webSource.type)
-                    if issueDetailsList is not None and len(issueDetailsList) > 0:
-                        for issueDetails in issueDetailsList:
-                            #if issueDetails['issueNum'] in seriesObject.issueList:
-                            # We want all series issues, not just the ones that are used!
-                            curIssue = seriesObject.issueList[issueDetails['issueNum']]
-                            if isinstance(curIssue, Issue):
-                                curIssue.updateDetailsFromDict(issueDetails)
-                                curIssue.sourceType = dataSource.type
-                                issue.sourceList.setSourceChecked(dataSource.type)
-                                if dataSource.type in [ComicInformationSource.SourceType.Comicvine,ComicInformationSource.SourceType.Metron]:
-                                    dataDB.addIssue(curIssue.getDBDict())
-            
-            if seriesObject.hasCompleteIssueDetails():
-                break
-            else:
-                # Not all details found
-                pass
+            if seriesObject.hasValidID(webSource.type):
+                #TODO: Allow prioritisation of data sources when multiple matches found
+                for dataSource in activeDataSources:
+                    if isinstance(dataSource,ComicInformationSource):
+                        issueDetailsList = dataSource.getIssuesFromSeriesID(seriesObject.id, webSource.type)
+                        if issueDetailsList is not None and len(issueDetailsList) > 0:
+                            for issueDetails in issueDetailsList:
+                                #if issueDetails['issueNum'] in seriesObject.issueList:
+                                # We want all series issues, not just the ones that are used!
+                                curIssue = seriesObject.issueList[issueDetails['issueNum']]
+                                if isinstance(curIssue, Issue):
+                                    curIssue.updateDetailsFromDict(issueDetails)
+                                    curIssue.sourceType = dataSource.type
+                                    issue.sourceList.setSourceChecked(dataSource.type)
+                                    if dataSource.type in [ComicInformationSource.SourceType.Comicvine,ComicInformationSource.SourceType.Metron]:
+                                        dataDB.addIssue(curIssue.getDBDict())
+                
+                if seriesObject.hasCompleteIssueDetails():
+                    break
+                else:
+                    # Not all details found
+                    pass
 
 #def getSeriesIssueDetails(series : Series) -> None:
 #    try:

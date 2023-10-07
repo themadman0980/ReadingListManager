@@ -220,11 +220,11 @@ class CV(ComicInformationSource):
 
         if not config.CV.check_series: return None
 
-        #try:
-        results = _cvSession.volume_list(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
-        results = self.convertSeriesResultsToDict(results, resultsType)
-        #except Exception as e:
-        #    printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
+        try:
+            results = _cvSession.volume_list(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
+            results = self.convertSeriesResultsToDict(results, resultsType)
+        except Exception as e:
+            printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
 
         return results
 

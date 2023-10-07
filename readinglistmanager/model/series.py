@@ -68,11 +68,11 @@ class Series(Resource):
         self.altSeriesKeys = list()
 
     def __eq__(self, other):
-        if (isinstance(other, Series)):
-            if series.hasValidID() and other.hasValidID():
-                for dataSource in series.sourceList.getSourcesList():
-                    if datasource.id is not None and other.sourceList.getID(dataSource.type) is not None:
-                        return datasource.id == other.sourceList.getID(dataSource.type)
+        if isinstance(other, Series):
+            if self.hasValidID() and other.hasValidID():
+                for dataSource in self.sourceList.getSourcesList():
+                    if dataSource.id is not None and other.sourceList.getSourceID(dataSource.type) is not None:
+                        return dataSource.id == other.sourceList.getSourceID(dataSource.type)
 
             #If not matches found among database ID's, match based on name/year combo
             return self.dynamicName == other.dynamicName and self.startYear == other.startYear
@@ -133,7 +133,7 @@ class Series(Resource):
         return sorted(self._issueNums)
 
     def hasCompleteSeriesDetails(self):
-        if self.hasValidID() and None not in (self.name, self.startYear, self.publisher, self.numIssues):
+        if self.hasValidID() and None not in (self.name, self.startYear, self.numIssues):
             return True
         return False
 

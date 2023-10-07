@@ -71,9 +71,9 @@ class ProblemData():
                 for entry in ProblemData._list[section]:
                     string = "Unknown"
                     if isinstance(entry,ProblemIssue):
-                        string = "Issue : %s = %s (%s) [%s] #%s [%s]" % (entry.type.value,entry.series.name,entry.series.startYear,entry.series.id,entry.issueNumber,entry.id)
+                        string = "Issue : %s = %s (%s) #%s" % (entry.type.value,entry.series.name,entry.series.startYear,entry.issueNumber)
                     if isinstance(entry,ProblemSeries):
-                        string = "\nSeries : %s = %s (%s) [%s] - '%s (%s)'" % (entry.type.value,entry.name,entry.startYear,entry.id,entry.dynamicName,entry.startYear)
+                        string = "\nSeries : %s = %s (%s) - '%s (%s)'" % (entry.type.value,entry.name,entry.startYear,entry.dynamicName,entry.startYear)
                         issueList = []
                         for issue in entry.issueList.values():
                             issueYear = issue.getYear()
