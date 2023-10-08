@@ -41,14 +41,11 @@ class Issue(Resource):
 
     def __eq__(self, other):
         if (isinstance(other, Issue)):
-            if self.id and other.id:
-                return self.id == other.id
-            else:
-                return self.series == other.series and self.issueNumber == other.issueNumber
+            return self.series == other.series and self.issueNumber == other.issueNumber
         return False
 
     def __hash__(self):
-        return hash((self.series.dynamicName, self.series.startYear, self.issueNumber, self.id))
+        return hash((self.series.dynamicName, self.series.startYear, self.issueNumber))
 
     # Check that issueID and seriesID exist
     #@classmethod
@@ -93,10 +90,10 @@ class Issue(Resource):
             self.detailsFound = True
         except Exception as e:
             if self.series is not None: 
-                printResults("Error: Unable to update issue \'%s (%s) #%s [%s]\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, self.id, match),4)
+                printResults("Error: Unable to update issue \'%s (%s) #%s\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, match),4)
                 printResults("Exception: %s" % (e),4)
             else:
-                printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.id, match),4)
+                printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.getSourceID(match['dataSource']), match),4)
                 printResults("Exception: %s" % (e),4)
 
     def setSourceDate(self, issueDate : PublicationDate):

@@ -75,28 +75,34 @@ def parseCBLfiles():
                         continue
 
                     seriesID = issueID = None
-
-                    # Check for ID details in CBL entry
-                    databaseEntries = entry.findall('Database')
-                    if databaseEntries is not None or len(databaseEntries) == 0:
-                        for databaseElement in databaseEntries:
-                            if 'Name' in databaseElement.attrib:
-                                if databaseElement.attrib['Name'] == 'cv':
-                                    seriesID = databaseElement.attrib['Series']
-                                    issueID = databaseElement.attrib['Issue']
                     
                     curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
 
                     # Get issue using series
                     if isinstance(curIssue,Issue):
                         curIssue.setSourceDate(issueYear)
-                        # Update seriesID if found
-                        if seriesID is not None and utilities.isValidID(seriesID) and isinstance(curIssue.series,Series) and curIssue.series.id is None:
-                            curIssue.series.id = seriesID
-                                        
-                        # Update issueID if found
-                        if issueID is not None and utilities.isValidID(issueID) and isinstance(curIssue,Issue):
-                            curIssue.id = issueID
+
+                        # Check for ID details in CBL entry
+                        databaseEntries = entry.findall('Database')
+
+                        # Add ID for any database sources found
+                        if databaseEntries is not None or len(databaseEntries) == 0:
+                            for databaseElement in databaseEntries:
+                                if 'Name' in databaseElement.attrib:
+                                    for webSource in dataManager.activeWebSources:
+                                        if databaseElement.attrib['Name'].lower() == webSource.type.value.lower():
+                                            # Update issue ID
+                                            issue.setSourceID(webSource.type,databaseElement.attrib['Issue'])
+
+                                            # Update series ID
+                                            if issue.series is not None:
+                                                if issue.series.hasValidID(webSource.type):
+                                                    if issue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
+                                                        printResults("Warning: Series existing ID does not match proposed ID!")
+                                                else:
+                                                    issue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
+
+                                            break
 
                     readingList.addIssue(i, curIssue)
                     curIssue.addReadingListRef(readingList)

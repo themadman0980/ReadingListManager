@@ -697,6 +697,12 @@ def printSummaryResults():
     printResults("*** Reading List Statistics ***", 2)
     readingListCompleteIssuesCount = 0
     readingListSet = getReadingListSet()
+
+    issuesCheckedSet = set()
+    issueIDsFound = dict()
+    for source in activeWebSources:
+        issueIDsFound[source.type] = 0
+
     for readingList in readingListSet:
         if isinstance(readingList, ReadingList):
             seriesDetailsFound = issueDetailsFound = 0
@@ -707,6 +713,11 @@ def printSummaryResults():
             for issue in readingList.issueList.values():
                 if isinstance(issue, Issue):
                     seriesSet.add(issue.series)
+                    if issue not in issuesCheckedSet:
+                        for source in issueIDsFound.keys():
+                            if issue.hasValidID(source):
+                                issueIDsFound[source] += 1
+                        issuesCheckedSet.add(issue)
                     if issue.detailsFound:
                         issueDetailsFound += 1
 
@@ -725,6 +736,8 @@ def printSummaryResults():
 
     printResults("Reading List Summary", 3)
     printResults("Complete List Details Found : %s / %s" % (readingListCompleteIssuesCount,len(readingListSet)), 4)
+    for source in issueIDsFound.keys():
+        printResults("%s issues matched : %s / %s" % (str(source.value).capitalize(),issueIDsFound[source],len(issuesCheckedSet)),4)
 
 
     printResults("*** Series Statistics ***", 2)

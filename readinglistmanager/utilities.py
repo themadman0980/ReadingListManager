@@ -214,7 +214,9 @@ def printResults(string, indentation=0, lineBreak=False, replace=False):
         string = string.replace("Error", "\033[91mWarning\033[0m")
 
         if replace:
-            print("%s%s" % ('\t'*indentation, string), end="\r", flush=True)
+            # TODO: Fix broken line overwrite: https://stackoverflow.com/questions/5419389/how-to-overwrite-the-previous-print-to-stdout
+            #print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r", flush=True)            
+            print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r")            
         else:
             print("%s%s" % ('\t'*indentation, string))
 
