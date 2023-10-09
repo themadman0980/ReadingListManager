@@ -90,17 +90,20 @@ def parseCBLfiles():
                             for databaseElement in databaseEntries:
                                 if 'Name' in databaseElement.attrib:
                                     for webSource in dataManager.activeWebSources:
-                                        if databaseElement.attrib['Name'].lower() == webSource.type.value.lower():
+                                        sourceNames = [webSource.type.value.lower()]
+                                        if webSource.type.value.lower() == 'comicvine':
+                                            sourceNames.append('cv')
+                                        if databaseElement.attrib['Name'].lower() in sourceNames:
                                             # Update issue ID
-                                            issue.setSourceID(webSource.type,databaseElement.attrib['Issue'])
+                                            curIssue.setSourceID(webSource.type,databaseElement.attrib['Issue'])
 
                                             # Update series ID
-                                            if issue.series is not None:
-                                                if issue.series.hasValidID(webSource.type):
-                                                    if issue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
+                                            if curIssue.series is not None:
+                                                if curIssue.series.hasValidID(webSource.type):
+                                                    if curIssue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
                                                         printResults("Warning: Series existing ID does not match proposed ID!")
                                                 else:
-                                                    issue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
+                                                    curIssue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
 
                                             break
 

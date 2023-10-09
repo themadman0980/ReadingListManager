@@ -451,6 +451,9 @@ def _updateSeriesFromDataSources(series : Series, checkDataSource : ComicInforma
 def _updateSeriesFromDataSource(series : Series, dataSource, dataSourceLookupType : ComicInformationSource.SourceType = None) -> None:
     # Check dataSource for match
     if isinstance(series, Series):
+        if series.name == 'Avengers Assemble':
+            pass
+
         if dataSourceLookupType is not None and series.hasValidID(dataSourceLookupType):
             seriesResults = dataSource.getSeriesFromSeriesID(dataSourceLookupType, series.getSourceID(dataSourceLookupType))
         elif series.hasValidID(dataSource.type):
@@ -507,42 +510,70 @@ def _checkSeriesIssuesMatch(filteredSeriesMatchDict : dict[list[dict]], series :
         for seriesResult in seriesList:
             # Lookup issue list for each series match
             for dataSource in activeDataSources:
-                seriesIssues = None
+                databaseSeriesIssues = None
 
                 if isinstance(dataSource, ComicInformationSource):
-                    seriesIssues = dataSource.getIssuesFromSeriesID(seriesResult['seriesID'], seriesResult['dataSource'])
+                    databaseSeriesIssues = dataSource.getIssuesFromSeriesID(seriesResult['seriesID'], seriesResult['dataSource'])
                     #series.sourceList.setSourceChecked(dataSource.type)
 
                 # Check if issue results exist
-                if seriesIssues is not None and len(seriesIssues) > 0:
+                if databaseSeriesIssues is not None and len(databaseSeriesIssues) > 0:
                     exactSeriesMatch = True
 
                     seriesIssueNumbers = series.getIssueNumsList()
 
                     # TODO : Account for series start years at different times
                     # Quick test to check that numResults >= numSeriesIssues 
-                    if len(seriesIssues) < len(seriesIssueNumbers):
+                    if len(databaseSeriesIssues) < len(seriesIssueNumbers):
                         exactSeriesMatch = False
                         break
-
-                    # Check if all expected issues exist in CV volume match
-                    for expectedIssueNum in seriesIssueNumbers:
-                        # Check if expected issue number exists in series
-                        if expectedIssueNum not in seriesIssues:
-                            exactSeriesMatch = False
-                            break
+                    else:
+                        # Check if all expected issues exist in CV volume match
+                        for expectedIssueNum in seriesIssueNumbers:
+                            doesCurrentIssueMatch = doesSeriesIssueMatchDatabaseResult(expectedIssueNum,seriesIssueNumbers,databaseSeriesIssues)
+                            if not doesCurrentIssueMatch:
+                                exactSeriesMatch = False
+                                break
                         
                     # Exit loop immediately if exact match is found                    
                     if exactSeriesMatch: 
                         if dataSource.type in [ComicInformationSource.SourceType.Comicvine,ComicInformationSource.SourceType.Metron]:
                             dataDB.addVolume(dataSource.type, seriesResult)
                             # Data obtained from CV
-                            for issue in seriesIssues.values():
+                            for issue in databaseSeriesIssues.values():
                                 dataDB.addIssue(dataSource.type, issue)
                         #Exact match found
-                        return {'seriesDetails':seriesResult, 'issueList':seriesIssues}
+                        return {'seriesDetails':seriesResult, 'issueList':databaseSeriesIssues}
     
     return None
+
+def doesSeriesIssueMatchDatabaseResult(curIssueNum : str, seriesIssueNums : list, databaseIssueNums : list):
+    # This function checks a selected issueNumber from seriesIssueList matches database search results
+
+    if curIssueNum in databaseIssueNums:
+        return True
+    else:
+        if not utilities.isNumber(curIssueNum):
+            # Current issue number is not an integer! Need to check for match after stripping additional characters from curIssueNum
+            strippedIssueNum = utilities.stripIssueNumber(curIssueNum)
+            if strippedIssueNum in databaseIssueNums and strippedIssueNum not in seriesIssueNums:
+                # Match found with stripped issueNumber, so safe to continue
+                return True
+        else: 
+            # Current issue number is an integer! Need to check for match after stripping additional characters from partial matches in databaseIssueNums
+
+            # Get all partial issue number matches in databaseIssueNums (as a list of strings)
+            partialIssueNumMatches = utilities.findPartialStringMatches(curIssueNum, databaseIssueNums)
+
+            if len(partialIssueNumMatches) > 0:
+                # Similar issue numbers found. Time to clean and compare them!
+                for issueNum in partialIssueNumMatches:
+                    if utilities.stripIssueNumber(issueNum) == curIssueNum:
+                        # Match found with stripped issueNumber, so safe to continue
+                        return True
+        
+        return False
+
 
 def _addSeriesToList(series : Series) -> None:
     # Add series to master series dict 

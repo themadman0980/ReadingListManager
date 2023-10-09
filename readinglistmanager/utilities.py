@@ -115,7 +115,7 @@ def isValidID(ID):
 
 def isNumber(value):
     try:
-        return str(value).replace('.','',1).isdigit()
+        return str(value).replace('-','').replace('.','',1).isdigit()
     except Exception as e:
         return False
 
@@ -357,3 +357,20 @@ def stripYearFromName(string : str):
 
 def scrubSQLVariable(string : str):
     return ''.join( chr for chr in string if chr.isalnum() or chr in ('_') )
+
+def stripIssueNumber(issueNum : str):
+    # Returns issue number as raw number (without string extras)
+    issueNumStripList = ['.NOW','AU']
+    adjustedIssueNum = issueNum
+
+    for extraString in issueNumStripList:
+        adjustedIssueNum = adjustedIssueNum.replace(extraString,'')
+
+    if not isNumber(adjustedIssueNum):
+        # Need to update StripList!
+        pass
+    
+    return adjustedIssueNum
+
+def findPartialStringMatches(string : str, stringList : list[str]):
+    return [s for s in stringList if string in s]
