@@ -68,7 +68,6 @@ def parseCBLfiles():
 
                     for field in essentialFields:
                         if field in discardValues:
-                            curProblemEntries += 1
                             problem = True
 
                     if problem:
@@ -101,7 +100,8 @@ def parseCBLfiles():
                                             if curIssue.series is not None:
                                                 if curIssue.series.hasValidID(webSource.type):
                                                     if curIssue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
-                                                        printResults("Warning: Series existing ID does not match proposed ID!")
+                                                        printResults("Warning: Series '%s (%s)' existing ID [%s] does not match proposed ID [%s]!" % (curIssue.series.name, curIssue.series.startYear, curIssue.series.getSourceID(webSource.type),databaseElement.attrib['Series']))
+                                                        #TODO: Handle digital releases of one-shots (eg. CVID 28134 vs 34404)
                                                 else:
                                                     curIssue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
 
@@ -190,7 +190,6 @@ def parseTXTfiles():
 
                         for field in essentialFields:
                             if field in discardValues:
-                                curProblemEntries += 1
                                 problem = True
 
                         if problem:

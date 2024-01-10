@@ -216,7 +216,8 @@ def printResults(string, indentation=0, lineBreak=False, replace=False):
         if replace:
             # TODO: Fix broken line overwrite: https://stackoverflow.com/questions/5419389/how-to-overwrite-the-previous-print-to-stdout
             #print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r", flush=True)            
-            print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r")            
+            #print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r")            
+            print("%s%s" % ('\t'*indentation, string), end="\r", flush=True)            
         else:
             print("%s%s" % ('\t'*indentation, string))
 

@@ -184,36 +184,37 @@ class ReadingList(Resource):
 
     def __init__(self, source: Source, listName=None, listID=None):
         super().__init__()
-        try:
-            self.source = source
-            self._name = None
-            self._sourceNameOverride = None
-            self.problems = dict()
-            self.dynamicName = None
-            self.startYear = None
-            self.publisher = None
-            self.sourceIssueList = None
-            self.id = listID
-            self.part = None
-            self.key = None
+        #try:
+        self.source = source
+        self._name = None
+        self._sourceNameOverride = None
+        self.problems = dict()
+        self.dynamicName = None
+        self.startYear = None
+        self.publisher = None
+        self.sourceIssueList = None
+        self.id = listID
+        self.part = None
+        self.key = None
 
-            if listName is not None:
-                self.name = listName
-            # elif filePath is not None:
-            #    self.name = filePath
-            elif isinstance(source, Source) and self.source.type in [ListSourceType.CBL,ListSourceType.TXT]:
-                self._getNameFromFile(self.source.file)
+        self.dataSourceType = None
+        self.checked = dict()
+        self.issueList = dict()
+        
+        if listName is not None:
+            self.name = listName
+        # elif filePath is not None:
+        #    self.name = filePath
+        elif isinstance(source, Source) and self.source.type in [ListSourceType.CBL,ListSourceType.TXT]:
+            self._getNameFromFile(self.source.file)
 
-            if self.source is not None and isinstance(self.source, Source):
-                self.key = ReadingList.getKey(
-                    self.dynamicName, self.source.type, self.source.name)
+        if self.source is not None and isinstance(self.source, Source):
+            self.key = ReadingList.getKey(
+                self.dynamicName, self.source.type, self.source.name)
 
-            self.dataSourceType = None
-            self.checked = dict()
-            self.issueList = dict()
-        except Exception as e:
-            printResults("Error: Problem initialising new list %s [%s] : %s" % (
-                listName, source, str(e)), 4)
+        #except Exception as e:
+        #    printResults("Error: Problem initialising new list %s [%s] : %s" % (
+        #        listName, source, str(e)), 4)
 
     def __hash__(self):
         return hash((self.dynamicName, self.source))
@@ -387,7 +388,7 @@ class ReadingList(Resource):
             self._name = str(cleanName['listName']).strip()
 
             #Update source type from CBL to WEB if filename indicates WEB source
-            if self.source.type == ListSourceType.CBL and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
+            if self.source.type == ListSourceType.CBL and 'source' in cleanName and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
                 newSourceName = utilities._getWebSourceName(cleanName['source'])
                 self._sourceNameOverride = newSourceName
 

@@ -1,2 +1,2 @@
-simyan>=0.9.0
+simyan>=1.2.0
 mokkari>=2.6.0
