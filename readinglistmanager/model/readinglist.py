@@ -6,12 +6,14 @@ import os
 from datetime import datetime
 import re
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.issueRange import IssueRange, IssueRangeCollection
 from readinglistmanager.model.series import Series
-from readinglistmanager.datamanager.datasource import Source, ListSourceType
+from readinglistmanager.model.date import PublicationDate
+from readinglistmanager.datamanager.datasource import Source, ListSourceType, ComicInformationSource
 from readinglistmanager import config, filemanager, utilities
+from readinglistmanager.model.resource import Resource
 
-
-class ReadingList:
+class ReadingList(Resource):
 
     #    @classmethod
     #    def printSummaryResults(self, readingLists):
@@ -43,25 +45,19 @@ class ReadingList:
         for key, issue in sorted(self.issueList.items()):
             if isinstance(issue, Issue):
                 # Check if issue cover date exists
-                if issue.coverDate is not None and isinstance(issue.coverDate, datetime):
-                    issueYear = issue.coverDate.year
-                else:
-                    issueYear = issue.year
-                
-                if issueYear is None : issueYear = '' 
-
                 seriesName = utilities.escapeString(issue.series.name)
                 issueNum = utilities.escapeString(issue.issueNumber)
 
                 if issue.hasValidID() or (isinstance(issue.series, Series) and issue.series.hasValidID()):
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\">" % (
-                        seriesName, issueNum, issue.series.startYear, issueYear))
-                    lines.append(
-                        "<Database Name=\"cv\" Series=\"%s\" Issue=\"%s\" />" % (issue.series.id, issue.id))
+                        seriesName, issueNum, issue.series.startYear, issue.getYear()))
+                    for source in issue.sourceList.getSourcesList():
+                        if source.id is not None and source.type is not ComicInformationSource.SourceType.Database:
+                            lines.append("<Database Name=\"%s\" Series=\"%s\" Issue=\"%s\" />" % (source.name, issue.series.getSourceID(source.type), source.id))
                     lines.append("</Book>")
                 else:
                     lines.append("<Book Series=\"%s\" Number=\"%s\" Volume=\"%s\" Year=\"%s\" />" %
-                                 (seriesName, issueNum, issue.series.startYear, issueYear))
+                                 (seriesName, issueNum, issue.series.startYear, issue.getYear()))
 
         lines.append("</Books>")
         lines.append("<Matchers />")
@@ -88,10 +84,16 @@ class ReadingList:
             database = {'Name': 'Comicvine', 'ID': self.id}
             listData['Database'].append(database)
 
-        listData['Issues'] = dict()
-        for number, issue in self.issueList.items():
+        issueData = list()
+
+        for issue in self.issueList.values():
             if isinstance(issue, Issue):
-                listData['Issues'][str(number)] = issue.getJSONDict()
+                issueData.append(issue.getJSONDict())
+
+        #listData['Issues'] = dict()
+        #for number, issue in self.issueList.items():
+        #    if isinstance(issue, Issue):
+        #        listData['Issues'][str(number)] = issue.getJSONDict()
 
         return listData
 
@@ -101,9 +103,9 @@ class ReadingList:
 
         if self.issueList is not None and issueCount > 0:
             for number, issue in self.issueList.items():
-                if isinstance(issue, Issue) and issue.year is not None:
+                if isinstance(issue, Issue) and issue.getYear() is not None:
                     try:
-                        curIssueYear = int(issue.year)
+                        curIssueYear = int(issue.getYear())
                     except:
                         continue
 
@@ -181,36 +183,38 @@ class ReadingList:
         self.publisher = curPublisher
 
     def __init__(self, source: Source, listName=None, listID=None):
-        try:
-            self.source = source
-            self._name = None
-            self._sourceNameOverride = None
-            self.problems = dict()
-            self.dynamicName = None
-            self.startYear = None
-            self.publisher = None
-            self.sourceIssueList = None
-            self.id = listID
-            self.part = None
-            self.key = None
+        super().__init__()
+        #try:
+        self.source = source
+        self._name = None
+        self._sourceNameOverride = None
+        self.problems = dict()
+        self.dynamicName = None
+        self.startYear = None
+        self.publisher = None
+        self.sourceIssueList = None
+        self.id = listID
+        self.part = None
+        self.key = None
 
-            if listName is not None:
-                self.name = listName
-            # elif filePath is not None:
-            #    self.name = filePath
-            elif isinstance(source, Source) and self.source.type == ListSourceType.CBL:
-                self._getNameFromFile(self.source.file)
+        self.dataSourceType = None
+        self.checked = dict()
+        self.issueList = dict()
+        
+        if listName is not None:
+            self.name = listName
+        # elif filePath is not None:
+        #    self.name = filePath
+        elif isinstance(source, Source) and self.source.type in [ListSourceType.CBL,ListSourceType.TXT]:
+            self._getNameFromFile(self.source.file)
 
-            if self.source is not None and isinstance(self.source, Source):
-                self.key = ReadingList.getKey(
-                    self.dynamicName, self.source.type, self.source.name)
+        if self.source is not None and isinstance(self.source, Source):
+            self.key = ReadingList.getKey(
+                self.dynamicName, self.source.type, self.source.name)
 
-            self.dataSourceType = None
-            self.checked = dict()
-            self.issueList = dict()
-        except Exception as e:
-            printResults("Error: Problem initialising new list %s [%s] : %s" % (
-                listName, source, str(e)), 4)
+        #except Exception as e:
+        #    printResults("Error: Problem initialising new list %s [%s] : %s" % (
+        #        listName, source, str(e)), 4)
 
     def __hash__(self):
         return hash((self.dynamicName, self.source))
@@ -275,6 +279,31 @@ class ReadingList:
         self.problems[problemType] = extraData
 
     @classmethod
+    def sortListsByReleaseDate(self,readingLists : list):
+        if isinstance(readingLists, list):
+            for readingList in readingLists:
+                readingList.sortListByReleaseDate()
+
+    def sortListByReleaseDate(self):
+        if self.source is not None and self.source.type is ListSourceType.TXT:
+            # Sort issue list by datestamp
+            originalIssueList = list(self.issueList.values())
+            sortedIssueList = sorted(originalIssueList,key=lambda x: x.getIssueReleaseDateString())
+
+            # Create numbered dict
+            sortedIssueDict = dict()
+            i=0
+
+            for issueEntry in sortedIssueList:
+                i+=1
+                sortedIssueDict[i] = issueEntry
+
+            # Update readinglist issue list
+            self.issueList = sortedIssueDict
+
+
+
+    @classmethod
     def fromDict(self, matchData: dict, listType: ListSourceType) -> 'ReadingList':
         listSource = Source(matchData['name'], None, listType)
         curList = ReadingList(
@@ -317,24 +346,24 @@ class ReadingList:
         if self.publisher is not None:
             fileName.append("[%s]" % self.publisher)
 
-        if self.startYear is not None:
-            fileName.append("(%s)" % self.startYear)
+        #if self.startYear is not None:
+        #    fileName.append("(%s)" % self.startYear)
 
         fileName.append("%s" % (str(self.name)))
 
         if self.part is not None:
             fileName.append("Part #%s" % str(self.part))
 
-        sourceName = self.getSourceName()
-        if self._sourceNameOverride is not None:
-            # String override in effect for WEB source
-            sourceString = "WEB-%s" % (sourceName)
-            fileName.append("(%s)" % sourceString)
-        elif isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
-            sourceString = self.source.type.value
-            if self.source.type == ListSourceType.Website:
-                sourceString += '-%s' % self.source.name
-            fileName.append("(%s)" % sourceString)
+        #sourceName = self.getSourceName()
+        #if self._sourceNameOverride is not None:
+        #    # String override in effect for WEB source
+        #    sourceString = "WEB-%s" % (sourceName)
+        #    fileName.append("(%s)" % sourceString)
+        #elif isinstance(self.source, Source) and isinstance(self.source.type, ListSourceType):
+        #    sourceString = self.source.type.value
+        #    if self.source.type == ListSourceType.Website:
+        #        sourceString += '-%s' % self.source.name
+        #    fileName.append("(%s)" % sourceString)
 
         return " ".join(fileName)
 
@@ -356,10 +385,10 @@ class ReadingList:
                 if 'partNumber' in cleanName:
                     self.part = cleanName['partNumber']
 
-            self._name = cleanName['listName']
+            self._name = str(cleanName['listName']).strip()
 
             #Update source type from CBL to WEB if filename indicates WEB source
-            if self.source.type == ListSourceType.CBL and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
+            if self.source.type == ListSourceType.CBL and 'source' in cleanName and isinstance(cleanName['source'],str) and utilities._isWebSource(cleanName['source']):
                 newSourceName = utilities._getWebSourceName(cleanName['source'])
                 self._sourceNameOverride = newSourceName
 
@@ -380,7 +409,8 @@ class ReadingList:
 
     title = property(**title())
 
-    def getSeriesSummary(readingLists : list) -> list:
+
+    def getEventSeriesSummary(readingLists : list) -> list:
         
         textLines = ["Summary of Reading List Series"]
 
@@ -403,13 +433,19 @@ class ReadingList:
                         seriesLength = None
 
                         for issue in issues:
-                            if isinstance(issue, Issue): 
+                            if isinstance(issue, Issue):                     
+                                if issue.issueNumber is None or issue.issueNumber in ["", " "]:
+                                    pass
+
                                 issueNumList.append(issue.issueNumber)
                                 if seriesLength is None and isinstance(issue.series, Series):
                                     seriesLength = issue.series.numIssues
 
                         # Try to group
-                        curIssueList = utilities.simplifyListOfNumbers(issueNumList)
+                        if "." in issueNumList:
+                            pass
+                        
+                        curIssueList = IssueRangeCollection.fromListOfNumbers(issueNumList)
 
 
                         if seriesLength is None:
@@ -419,7 +455,7 @@ class ReadingList:
                         else:
                             completeStatus = "Incomplete"
 
-                        textLines.append("%s : %s [%s]" % (series,", ".join(curIssueList),completeStatus))
+                        textLines.append("%s : %s [%s]" % (series, curIssueList.issueRangeString, completeStatus))
         
         return textLines
 

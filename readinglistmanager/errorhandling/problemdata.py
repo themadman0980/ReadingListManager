@@ -9,6 +9,7 @@ class ProblemData():
         CVNoNameYearMatch = "No CV Match"
         CVNoIssueMatch = "Issue Not Found In CV Series"
         CVSimilarMatch = "Similar CV Match"
+        IssueDateMismatch = "Mismatch Between Source & CV Cover Date"
         CVIncorrectYear = "CV Match With Incorrect Year"
         PublisherBlacklisted = "Publisher on Blacklist"
         NameCleaned = "Name Cleaned"
@@ -46,7 +47,11 @@ class ProblemData():
         if isinstance(problemType, ProblemData.ProblemType):
             ProblemData._list[problemType].append(ProblemReadingList(readingList, problemType, extraData))
             ProblemData._problemReadingLists.add(readingList)
-
+    
+    @classmethod
+    def getData(self, problemType : ProblemType):
+        if isinstance(problemType,ProblemData.ProblemType):
+            return self._list[problemType]
 
 #    def _checkForPartialMatch(self,nameClean,cvResults):
 #        if self.type == ProblemData.ProblemType.CVNoMatch and cvResults is not None:
@@ -66,16 +71,12 @@ class ProblemData():
                 for entry in ProblemData._list[section]:
                     string = "Unknown"
                     if isinstance(entry,ProblemIssue):
-                        string = "Issue : %s = %s (%s) [%s] #%s [%s]" % (entry.type.value,entry.series.name,entry.series.startYear,entry.series.id,entry.issueNumber,entry.id)
+                        string = "Issue : %s = %s (%s) #%s" % (entry.type.value,entry.series.name,entry.series.startYear,entry.issueNumber)
                     if isinstance(entry,ProblemSeries):
-                        string = "\nSeries : %s = %s (%s) [%s] - '%s (%s)'" % (entry.type.value,entry.name,entry.startYear,entry.id,entry.dynamicName,entry.startYear)
+                        string = "\nSeries : %s = %s (%s) - '%s (%s)'" % (entry.type.value,entry.name,entry.startYear,entry.dynamicName,entry.startYear)
                         issueList = []
                         for issue in entry.issueList.values():
-                            issueYear = None
-                            if issue.coverDate is not None and isinstance(issue.coverDate,datetime): 
-                                issueYear = issue.coverDate.year
-                            else:
-                                issueYear = issue.year
+                            issueYear = issue.getYear()
                             issueList.append("%s (%s)" % (issue.issueNumber,issueYear))
 
                         string += '\n Issues: %s' % entry.getIssueNumsList()

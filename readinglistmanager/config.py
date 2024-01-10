@@ -10,10 +10,23 @@ config = configparser.ConfigParser(allow_no_value=True)
 
 configDict = {
     'CV': {
+        'active': True,
         'check_arcs': True,
         'check_series': True,
         'check_issues': True,
+        'cache_searches': True,
         'api_key': 'API_KEY_HERE',
+        'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Abril", "Ediciones Zinco", "Dino Comics", "Unknown"],
+        'publisher_preferred': ["Marvel", "DC Comics"],
+    },
+    'Metron': {
+        'active': True,
+        'check_arcs': True,
+        'check_series': True,
+        'check_issues': True,
+        'cache_searches': True,
+        'username': 'USERNAME_HERE',
+        'password': 'PASSWORD_HERE',
         'publisher_blacklist': ["Panini Comics", "Editorial Televisa", "Planeta DeAgostini", "Abril", "Ediciones Zinco", "Dino Comics", "Unknown"],
         'publisher_preferred': ["Marvel", "DC Comics"],
     },
@@ -24,10 +37,11 @@ configDict = {
     },
     'Export': {
         'preserve_file_structure' : False,
+        'sort_generated_by_release_date' : False
     },
     'Troubleshooting' : {
-        'process_cbl': True,
-        'process_web_dl': False,
+        'process_files': True,
+        'process_web_db': False,
         'verbose': False,
     }
 }
@@ -81,6 +95,7 @@ def getConfigOption(option : str, configSection : str, type, defaultValue):
 class CV():
     sectionName = 'CV'
 
+    active = getConfigOption('active', sectionName, bool, True)
     api_key = getConfigOption('api_key', sectionName, str, None)
     if api_key is not None and api_key == 'API_KEY_HERE':
         api_key = None
@@ -92,6 +107,33 @@ class CV():
     else:
         #Turn off all CV searching due to missing key
         check_arcs = check_series = check_issues = False
+
+    cache_searches = getConfigOption('cache_searches', sectionName, bool, True)
+
+    publisher_blacklist = getConfigOption('publisher_blacklist', sectionName, list, list())
+    publisher_preferred = getConfigOption('publisher_preferred', sectionName, list, list())
+
+class Metron():
+    sectionName = 'Metron'
+
+    active = getConfigOption('active', sectionName, bool, True)
+    username = getConfigOption('username', sectionName, str, None)
+    if username is not None and username == 'USERNAME_HERE':
+        username = None
+
+    password = getConfigOption('password', sectionName, str, None)
+    if password is not None and password == 'PASSWORD_HERE':
+        password = None
+
+    if None not in (username, password):
+        check_arcs = getConfigOption('check_arcs', sectionName, bool, True)
+        check_series = getConfigOption('check_series', sectionName, bool, True)
+        check_issues = getConfigOption('check_issues', sectionName, bool, True)
+    else:
+        #Turn off all Metron searching due to missing key
+        check_arcs = check_series = check_issues = False
+
+    cache_searches = getConfigOption('cache_searches', sectionName, bool, True)
 
     publisher_blacklist = getConfigOption('publisher_blacklist', sectionName, list, list())
     publisher_preferred = getConfigOption('publisher_preferred', sectionName, list, list())
@@ -114,10 +156,11 @@ class Export():
     sectionName = 'Export'
 
     preserve_file_structure = getConfigOption('preserve_file_structure', sectionName, bool, False)
+    sort_generated_by_release_date = getConfigOption('sort_generated_by_release_date', sectionName, bool, False)
 
 class Troubleshooting():
     sectionName = 'Troubleshooting'
 
-    process_cbl = getConfigOption('process_cbl', sectionName, bool, True)
-    process_web_dl = getConfigOption('process_web_dl', sectionName, bool, False)
+    process_files = getConfigOption('process_files', sectionName, bool, True)
+    process_web_db = getConfigOption('process_web_db', sectionName, bool, False)
     verbose = getConfigOption('verbose', sectionName, bool, False)

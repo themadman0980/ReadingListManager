@@ -3,24 +3,29 @@
 from readinglistmanager.utilities import printResults
 from readinglistmanager import utilities
 from enum import Enum
-from datetime import datetime
+from readinglistmanager.model.date import PublicationDate
+from readinglistmanager.model.resource import Resource
+from readinglistmanager.datamanager.datasource import ComicInformationSource, WebSourceList
 
-
-class Issue:
+class Issue(Resource):
 
     def __init__(self, series, issueNumber : str, dataSourceType):
         if issueNumber is None:
             printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
         self.issueNumber = str(issueNumber)
         self.series = series
-        self.id = None
+        self.listReferences = set()
+
+        self.sourceList = WebSourceList()
+
         self.year = None
         self.name = None
+        self.sourceDate = None
         self.coverDate = None
         self.description = None
         self.summary = None
         self.issueType = None
-        self.sourceType = dataSourceType
+        self.mainDataSourceType = dataSourceType
         self.detailsFound = False
 
     #@classmethod
@@ -36,18 +41,29 @@ class Issue:
 
     def __eq__(self, other):
         if (isinstance(other, Issue)):
-            if self.id and other.id:
-                return self.id == other.id
-            else:
-                return self.series == other.series and self.issueNumber == other.issueNumber
+            return self.series == other.series and self.issueNumber == other.issueNumber
         return False
 
     def __hash__(self):
-        return hash((self.series.dynamicName, self.series.startYear, self.issueNumber, self.id))
+        return hash((self.series.dynamicName, self.series.startYear, self.issueNumber))
 
     # Check that issueID and seriesID exist
-    def hasValidID(self):
-        return utilities.isValidID(self.id)
+    #@classmethod
+    #def hasValidID(issue : Issue, source : ComicInformationSource.SourceType = None):
+    #    if source is None:
+    #        for webSource in issue.sourceList.values():
+    #            if utilities.isValidID(webSource.id):
+    #                return True
+    #        
+    #        return False
+    #
+    #    elif source in issue.sourceList:
+    #        return utilities.isValidID(issue.sourceList[source].id)
+    #    else:
+    #        return False
+    #
+    #def hasValidID(self, source : ComicInformationSource.SourceType = None):
+    #    return Issue.hasValidID(self, source)
 
     @classmethod
     def fromDict(self, match : dict):
@@ -55,50 +71,84 @@ class Issue:
         newIssue.updateDetailsFromDict(match)
         return newIssue
 
+    def addReadingListRef(self,readingList):
+        self.listReferences.add(readingList)
+
+    def getReadingListRefs(self):
+        return self.listReferences
+
     def updateDetailsFromDict(self, match : dict) -> None:
         # Populate attributes from _issueDetailsTemplate dict structure
         try:
-            self.id = match['issueID']
             self.name = match['name']
             self.setCoverDate(match['coverDate'])
             self.description = match['description']
             self.summary = match['summary']
             self.issueType = match['issueType']
-            self.sourceType = match['dataSource']
+            self.mainDataSourceType = match['dataSource']
+            self.setSourceID(match['dataSource'],match['issueID'])
             self.detailsFound = True
         except Exception as e:
             if self.series is not None: 
-                printResults("Error: Unable to update issue \'%s (%s) #%s [%s]\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, self.id, match),4)
+                printResults("Error: Unable to update issue \'%s (%s) #%s\' from match data : %s" % (self.series.name, self.series.startYear, self.issueNumber, match),4)
                 printResults("Exception: %s" % (e),4)
             else:
-                printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.id, match),4)
+                printResults("Error: Unable to update issue #%s [%s] from match data : %s" % (self.issueNumber, self.getSourceID(match['dataSource']), match),4)
                 printResults("Exception: %s" % (e),4)
 
-    def setCoverDate(self, coverDate : datetime):
-        if isinstance(coverDate, datetime):
-            self.coverDate = coverDate
-        elif isinstance(coverDate, str):
+    def setSourceDate(self, issueDate : PublicationDate):
+        if isinstance(issueDate, PublicationDate):
+            self.sourceDate = issueDate
+        elif issueDate is not None:
             try:
-                self.coverDate = utilities.getDateFromString(coverDate)
-            except:
+                self.sourceDate = PublicationDate(issueDate)
+            except Exception as e:
                 pass
 
-        if isinstance(self.coverDate, datetime):
+    def setCoverDate(self, coverDate : PublicationDate):
+        if isinstance(coverDate, PublicationDate):
+            self.coverDate = coverDate
+        elif coverDate is not None:
+            try:
+                self.coverDate = PublicationDate(coverDate)
+            except Exception as e:
+                pass
+
+        if isinstance(self.coverDate, PublicationDate):
             self.year = self.coverDate.year
+
+    def getYear(self):
+        if self.coverDate is not None and isinstance(self.coverDate, PublicationDate):
+            return self.coverDate.year
+        if self.sourceDate is not None and isinstance(self.sourceDate, PublicationDate):
+            return self.sourceDate.year
+
+        return None
+
+    def getIssueReleaseDateString(self):
+
+        releaseDate = self.coverDateString
+
+        if releaseDate in [None,""]:
+            if self.sourceDate is not None and isinstance(self.sourceDate, PublicationDate):
+                releaseDate = self.sourceDate.getString()
+
+        return releaseDate
 
     def coverDateString():
         doc = "The issue's coverdate in String format"
 
         def fget(self):
+            if self.coverDate is not None and isinstance(self.coverDate, PublicationDate):
+                return self.coverDate.getString()
 
-            return utilities.getStringFromDate(self.coverDate)
+            return ""
         return locals()
     coverDateString = property(**coverDateString())
 
     def getDBDict(self) -> dict:
         data = {
-            'issueID': self.id, 
-            'seriesID': self.series.id, 
+            'Database': self._getSourceIDs(), 
             'name': self.name, 
             'coverDate': self.coverDateString, 
             'issueNum': self.issueNumber, 
@@ -113,12 +163,8 @@ class Issue:
             'IssueNum': self.issueNumber,
             'IssueType': None,
             'CoverDate': self.coverDateString,
-            'Database': {
-                'Name':'Comicvine',
-                'SeriesID': self.series.id, 
-                'IssueID': self.id
-                }
-            }
+            'Database': self.sourceList.getSourcesJSON()
+            }            
 
         if self.issueType is not None:
             data.update({'IssueType': self.issueType.value})

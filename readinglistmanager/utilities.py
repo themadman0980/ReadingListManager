@@ -5,16 +5,18 @@ import unicodedata  # Needed to strip character accents
 import re
 import os
 import string
-from datetime import datetime
+from datetime import datetime, date
 from readinglistmanager import filemanager
+import decimal
 
 resultsFile = filemanager.resultsFile
 problemsFile = filemanager.problemsFile
-dateFormat = '%Y-%m-%d'
+dateFormats = ['%Y-%m-%d','%Y-%MM', '%Y']
 dynamicNameTemplate = '[^a-zA-Z0-9]'
 stop_words = ['the', 'a', 'and']
 yearStringCleanTemplate = '[^0-9]'
 cleanStringTemplate = '[^a-zA-Z0-9\:\-\(\) ]'
+seriesKeyOverrides = {'The Star Wars':'thestarwars'}
 
 
 def getCurrentTimeStamp():
@@ -22,23 +24,40 @@ def getCurrentTimeStamp():
 
 
 def getTodaysDate():
-    return datetime.today().strftime(dateFormat)
+    return datetime.today().strftime(dateFormats[0])
 
 
 def getStringFromDate(dateObject):
-    if dateObject is not None:
+    if dateObject is not None and isinstance(dateObject, date):
         try:
-            return datetime.strftime(dateObject, dateFormat)
+            return datetime.strftime(dateObject, dateFormats[0])
         except Exception as e:
-            return
+            pass
 
+    return
 
-def getDateFromString(dateString):
+def getDateFromStringFormats(dateString : str, stringFormats: list):
+    if None not in [dateString, stringFormats]:
+        matchDate = None
+        for dateFormat in stringFormats:
+            try:
+                matchDate = datetime.strptime(dateString, dateFormat)
+                return matchDate
+            except ValueError as e:
+                pass
+            except Exception as e:
+                pass
+            
+
+def getDateFromString(dateString : str):
     if dateString is not None:
-        try:
-            return datetime.strptime(dateString, dateFormat)
-        except Exception as e:
-            return
+        for dateFormat in dateFormats:
+            try:
+                return datetime.strptime(dateString, dateFormat)
+            except ValueError as e:
+                pass
+            except Exception as e:
+                pass
 
 
 def escapeString(string):
@@ -60,13 +79,16 @@ def stripSymbols(string):
 
 
 def getDynamicName(string):
-    string = str(string)
-    string = stripAccents(string.lower())
-    cleanString = " ".join([word for word in str(
-        string).split() if word not in stop_words])
-    cleanString = re.sub(dynamicNameTemplate, '', str(cleanString))
+    if string in seriesKeyOverrides:
+        return seriesKeyOverrides[string]
+    else:
+        string = str(string)
+        string = stripAccents(string.lower())
+        cleanString = " ".join([word for word in str(
+            string).split() if word not in stop_words])
+        cleanString = re.sub(dynamicNameTemplate, '', str(cleanString))
 
-    return cleanString
+        return cleanString
 
 
 def hasValidEncoding(string):
@@ -83,10 +105,43 @@ def fixEncoding(string):
 
 
 def isValidID(ID):
+    if isinstance(ID, int):
+        pass
+    
     if ID is not None:
-        isDigit = str(ID).isdigit()
+        isDigit = isNumber(ID)
         return isDigit
     return False
+
+def isNumber(value):
+    try:
+        return str(value).replace('-','').replace('.','',1).isdigit()
+    except Exception as e:
+        return False
+
+def isInteger(value):
+    try:
+        tempValue = str(value)
+        return '.' not in tempValue and tempValue.isdigit()
+    except Exception as e:
+        return False
+
+def convertToNumber(value):
+    try:
+        tmpString = str(value)
+        if '.' in tmpString:
+            return float(value)
+        elif tmpString.isdigit():
+            return int(value)
+    except Exception as e:
+        return value
+
+    return None
+
+def float_range(start, stop, step):
+    while start < stop:
+        yield float(start)
+        start += decimal.Decimal(step)
 
 # def fixEncoding(string):
 #    wrong = 'windows-1252'
@@ -116,15 +171,9 @@ def getCleanYear(string):
         return cleanString
 
 
-def padNumber(number):
-    if number < 10:
-        return '000' + str(number)
-    elif number < 100:
-        return '00' + str(number)
-    elif number < 1000:
-        return '0' + str(number)
-    else:
-        return number
+def padNumber(number, numElements):
+    # Adds leading 0's to a number in string format
+    return str(number).zfill(numElements)
 
 
 def os_path_separators():
@@ -165,7 +214,10 @@ def printResults(string, indentation=0, lineBreak=False, replace=False):
         string = string.replace("Error", "\033[91mWarning\033[0m")
 
         if replace:
-            print("%s%s" % ('\t'*indentation, string), end="\r", flush=True)
+            # TODO: Fix broken line overwrite: https://stackoverflow.com/questions/5419389/how-to-overwrite-the-previous-print-to-stdout
+            #print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r", flush=True)            
+            #print("%s%s" % ('\t'*indentation, string), end="\x1b[1K\r")            
+            print("%s%s" % ('\t'*indentation, string), end="\r", flush=True)            
         else:
             print("%s%s" % ('\t'*indentation, string))
 
@@ -272,50 +324,6 @@ def cleanFileName(orig_name: str):
 
     return fixed_name
 
-def simplifyListOfNumbers(listNumbers : list) -> list:
-    # Intended to organise and simplify issue numbers into concatenated groups where possible
-
-    outputList = []
-    intList = set()
-
-    if isinstance(listNumbers, list) and len(listNumbers) > 1:
-        for listNum in listNumbers:
-            if isinstance(listNum,str) and listNum.isdigit():
-                intList.add(int(listNum))
-            else:
-                outputList.append(listNum)
-    
-        curStartingInt = None
-        prevInt = None
-        sortedInts = list(sorted(intList))
-
-        for intNum in sortedInts:
-            if curStartingInt == None:
-                # Starting a new consecutive number trail
-                curStartingInt = intNum
-            elif intNum == prevInt + 1:
-                # Current int is next consecutive number
-                pass
-            else:
-                # End a new consecutive number trail
-                outputList.append("%s-%s" % (curStartingInt,prevInt))
-
-                #Reset number trail
-                curStartingInt = None
-
-            prevInt = intNum
-
-            #Catch cases where all items in a list are consecutive
-            
-            if isinstance(curStartingInt,int) and (prevInt - curStartingInt == len(sortedInts) - 1):
-                outputList.append("%s-%s" % (curStartingInt,prevInt))
-            
-    else: 
-        outputList = listNumbers
-    
-    return outputList
-
-
 def confirmMylarImports() -> bool:
     yes = {'yes','y', 'ye'}
     no = {'no','n'}
@@ -327,5 +335,43 @@ def confirmMylarImports() -> bool:
     else:
         return False
 
+def parseStringIssueList(entry: str):
+    #seriesPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\) *'
+    #patterns = [
+    #    seriesPattern + r'#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))$',
+    #    seriesPattern + '$',
+    #]
 
+    entry = entry.strip()
+    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))?)? *$'
+    issueListDetails = None
 
+    match = re.search(issueListPattern, entry, re.IGNORECASE)
+
+    return match.groupdict() if match is not None else None
+
+def stripYearFromName(string : str):
+    if isinstance(string, str):
+        return str(re.sub(r'\(\d{4}\)','',string)).strip()
+    else:
+        return None
+
+def scrubSQLVariable(string : str):
+    return ''.join( chr for chr in string if chr.isalnum() or chr in ('_') )
+
+def stripIssueNumber(issueNum : str):
+    # Returns issue number as raw number (without string extras)
+    issueNumStripList = ['.NOW','AU']
+    adjustedIssueNum = issueNum
+
+    for extraString in issueNumStripList:
+        adjustedIssueNum = adjustedIssueNum.replace(extraString,'')
+
+    if not isNumber(adjustedIssueNum):
+        # Need to update StripList!
+        pass
+    
+    return adjustedIssueNum
+
+def findPartialStringMatches(string : str, stringList : list[str]):
+    return [s for s in stringList if string in s]

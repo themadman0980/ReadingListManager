@@ -4,184 +4,188 @@
 from html import unescape
 from readinglistmanager import config,filemanager,utilities
 #from readinglistmanager.datamanager import dataManager
-from readinglistmanager.utilities import printResults
+from readinglistmanager.utilities import printResults, stripYearFromName
 from readinglistmanager.model.date import PublicationDate
-from readinglistmanager.datamanager.datasource import ComicInformationSource,ListSourceType
-import simyan.schemas.volume, simyan.schemas.issue, simyan.schemas.story_arc, simyan.comicvine
-from simyan.sqlite_cache import SQLiteCache
+from readinglistmanager.datamanager.datasource import ComicInformationSource, ListSourceType
+import mokkari.series, mokkari.issue, mokkari.arc
+from mokkari.sqlite_cache import SqliteCache
+
+import mokkari
 
 CACHE_RETENTION_TIME = 60 #days
 MAX_RESULTS = 100
 
-if config.CV.cache_searches:
-    _cvSession = simyan.comicvine.Comicvine(api_key=config.CV.api_key, cache=SQLiteCache(filemanager.cvCacheFile,CACHE_RETENTION_TIME))
+if config.Metron.cache_searches:
+    _metronSession = mokkari.api(config.Metron.username, config.Metron.password, cache=SqliteCache(filemanager.metronCacheFile,CACHE_RETENTION_TIME))
 else:
-    _cvSession = simyan.comicvine.Comicvine(api_key=config.CV.api_key)
+    _metronSession = mokkari.api(config.Metron.username, config.Metron.password)
 
-class CV(ComicInformationSource):
+class Metron(ComicInformationSource):
     instance = None
-    type = ComicInformationSource.SourceType.Comicvine
+    type = ComicInformationSource.SourceType.Metron
 
     @classmethod
     def get(self):    
-        if CV.instance is None: 
-            CV.instance = CV()
+        if Metron.instance is None: 
+            Metron.instance = Metron()
 
-        return CV.instance
+        return Metron.instance
 
-    def convertIssueResultsToDict(self, issueResults : list[simyan.schemas.issue.IssueEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertIssueResultsToDict(self, issueResults : list[mokkari.issue.Issue], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(issueResults, simyan.schemas.issue.IssueEntry):
+        if isinstance(issueResults, mokkari.issue.Issue):
             # Single result found
             result = issueResults
             issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
-            issueType = ComicInformationSource._getIssueType(result.name, result.description,result.summary)
-            seriesID = None
-            if result.volume is not None: seriesID = str(result.volume.id)
+            issueType = ComicInformationSource._getIssueType(result.name, result.description,"")
+            
+            if hasattr(result,'desc'): 
+                description = result.desc
+            else:
+                description = none
+
             issueDetails.update({
                 'issueID' : str(result.id), 
-                'seriesID':str(seriesID),
-                'name' : result.name, 
+                'name' : result.issue_name, 
                 'coverDate' : PublicationDate.fromDateTimeObj(result.cover_date), 
                 'issueNum': str(result.number), 
                 'issueType' : issueType, 
-                'description' : result.description, 
-                'summary' : result.summary,
+                'description' : description, 
+                'summary' : "",
                 'dataSource' : self.type
                 })
             results.append(issueDetails)
-        elif isinstance(issueResults, list):
+        elif isinstance(issueResults, mokkari.issue.IssuesList):
             for result in issueResults:
-                if isinstance(result, simyan.schemas.issue.IssueEntry):
+                if isinstance(result, mokkari.issue.Issue):
                     issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
-                    issueType = ComicInformationSource._getIssueType(result.name,result.description,result.summary)
-                    seriesID = None
-                    if result.volume is not None: seriesID = str(result.volume.id)
+
+                    if hasattr(result, 'desc'): 
+                        description = result.desc
+                    else:
+                        description = None
+
+                    issueType = ComicInformationSource._getIssueType(result.issue_name,description,"")
                     issueDetails.update({
                         'issueID' : str(result.id), 
-                        'seriesID':str(seriesID),
-                        'name' : result.name, 
+                        'name' : result.issue_name, 
                         'coverDate' : PublicationDate.fromDateTimeObj(result.cover_date), 
                         'issueNum': str(result.number), 
                         'issueType' : issueType, 
-                        'description' : result.description, 
-                        'summary' : result.summary,
+                        'description' : description, 
+                        'summary' : "",
                         'dataSource' : self.type
                         })
                     results.append(issueDetails)
-                elif isinstance(result, simyan.schemas.generic_entries.IssueEntry):
-                    issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
-                    issueDetails.update({
-                        'issueID' : str(result.id), 
-                        'name' : result.name, 
-                        'issueNum': str(result.number), 
-                        'dataSource' : self.type
-                        })
-                    results.append(issueDetails)
-
-        if results is None or len(results) == 0:
-            self.updateCounter(ComicInformationSource.SearchStatusType.NoResultsCount,resultsType)
-        else:
-            self.updateCounter(ComicInformationSource.SearchStatusType.ResultsCount,resultsType)
-
-        if not config.CV.check_issues: results = None
-
-        return results
-
-
-    def convertSeriesResultsToDict(self, volumeResults : list[simyan.schemas.volume.VolumeEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
-        results = []
-        self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
-
-        if isinstance(volumeResults, simyan.schemas.volume.Volume):
-            # Single result found
-            result = volumeResults
-            seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
-            publisher = result.publisher.name if result.publisher is not None else None
-            issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.IssueList) if hasattr(result, 'issues') else None
-            seriesDetails.update({
-                'seriesID': str(result.id), 
-                'name' : result.name, 
-                'startYear' : result.start_year, 
-                'publisher' : publisher, 
-                'numIssues' : result.issue_count, 
-                'description' : result.description, 
-                'summary' : result.summary,
-                'issueList' : issueList,
-                'dataSource' : self.type
-                })
-            results.append(seriesDetails)
-        elif isinstance(volumeResults, list):
-            for result in volumeResults:
-                if isinstance(result, simyan.schemas.volume.Volume) or isinstance(result, simyan.schemas.volume.VolumeEntry):
-                    seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
-                    publisher = result.publisher.name if result.publisher is not None else None
-                    issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.IssueList) if hasattr(result, 'issues') else None
-                    #issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.IssueList) if hasattr(result, 'issues') else None
-                    seriesDetails.update({
-                        'seriesID': str(result.id), 
-                        'name' : result.name, 
-                        'startYear' : result.start_year, 
-                        'publisher' : publisher, 
-                        'numIssues' : result.issue_count, 
-                        'description' : result.description, 
-                        'summary' : result.summary,
-                        'issueList' : issueList,
-                        'dataSource' : self.type
-                        })
-                    results.append(seriesDetails)
         
         if results is None or len(results) == 0:
             self.updateCounter(ComicInformationSource.SearchStatusType.NoResultsCount,resultsType)
         else:
             self.updateCounter(ComicInformationSource.SearchStatusType.ResultsCount,resultsType)
 
+        if not config.Metron.check_issues: results = None
+
         return results
 
 
-    def convertReadingListResultsToDict(self, searchResults : list[simyan.schemas.story_arc.StoryArc], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertSeriesResultsToDict(self, volumeResults : list[mokkari.series.Series], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+        results = []
+        self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
+
+        if isinstance(volumeResults, mokkari.series.Series):
+            # Single result found
+            result = volumeResults
+            seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
+            publisher = result.publisher.name if result.publisher is not None else None
+            issueList = self.getIssuesFromSeriesID(result.id, self.type) if hasattr(result, 'id') else None
+            issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.IssueList) if issueList is not None else None
+            if hasattr(result, 'display_name'):
+                name = stripYearFromName(result.display_name)
+            else:
+                name = result.name
+            #issueList = self.convertIssueResultsToDict(volumeResults, ComicInformationSource.ResultType.IssueList) if hasattr(volumeResults, 'issues') else None
+            seriesDetails.update({
+                'seriesID': str(result.id), 
+                'name' : name, 
+                'startYear' : result.year_began, 
+                'publisher' : publisher, 
+                'numIssues' : result.issue_count, 
+                'description' : result.desc, 
+                'summary' : "",
+                'issueList' : issueList,
+                'dataSource' : self.type
+                })
+            results.append(seriesDetails)
+        elif isinstance(volumeResults, mokkari.series.SeriesList):
+            for result in volumeResults.series:
+                if isinstance(result, mokkari.series.Series):
+                    seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
+                    issueList = self.getIssuesFromSeriesID(result.id, self.type) if hasattr(result, 'id') else None
+                    #issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.IssueList) if issueList is not None else None
+                    #issueList = self.convertIssueResultsToDict(volumeResults, ComicInformationSource.ResultType.IssueList) if hasattr(volumeResults, 'issues') else None
+                    name = stripYearFromName(result.display_name)
+                    seriesDetails.update({
+                        'seriesID': str(result.id), 
+                        'name' : name, 
+                        'startYear' : result.year_began, 
+                        'numIssues' : result.issue_count, 
+                        'issueList' : issueList,
+                        'dataSource' : self.type
+                        })
+                    results.append(seriesDetails)        
+        if results is None or len(results) == 0:
+            self.updateCounter(ComicInformationSource.SearchStatusType.NoResultsCount,resultsType)
+        else:
+            self.updateCounter(ComicInformationSource.SearchStatusType.ResultsCount,resultsType)
+
+        return results
+
+
+    def convertReadingListResultsToDict(self, searchResults : list[mokkari.arc.Arc], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         dictResults = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(searchResults, simyan.schemas.story_arc.StoryArc):
+        if isinstance(searchResults, mokkari.arc.Arc):
             # Single result found
             result = searchResults
             listDetails = ComicInformationSource._listDetailsTemplate.copy()
             issueList = None
-            if result.issues is not None and isinstance(result.issues, list):
-                issueList = result.issues
+            if result.id is not None:
+                issueList = self.arc_issues_list(result.id)
+                issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.Issue)
                 # issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.Issue)
-            publisher = result.publisher.name if result.publisher is not None else None
+            #publisher = result.publisher.name if result.publisher is not None else None
             listDetails.update({
                 'listID': str(result.id), 
                 'name' : result.name, 
-                'publisher' : publisher, 
+                'publisher' : "", 
                 'issues': issueList, 
-                'numIssues' : result.issue_count, 
-                'description' : result.description, 
-                'summary' : result.summary,
+                'numIssues' : len(issueList), 
+                'description' : result.desc, 
+                'summary' : "",
                 'dataSource' : self.type
                 })
             dictResults.append(listDetails)
         elif isinstance(searchResults, list):
             for result in searchResults:
-                if isinstance(result, simyan.schemas.story_arc.StoryArc) or isinstance(result, simyan.schemas.story_arc.StoryArcEntry):
+                if isinstance(result, mokkari.arc.Arc):
                     listDetails = ComicInformationSource._listDetailsTemplate.copy()
                     issueList = None
-                    if result.issues is not None and isinstance(result.issues, list):
-                        issueList = result.issues
-                        # issueList = self.convertIssueResultsToDict(result.issues,ComicInformationSource.ResultType.Issue)
-                    publisher = result.publisher.name if result.publisher is not None else None
+                    if result.id is not None:
+                        issueList = self.arc_issues_list(result.id)
+                        issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.Issue)
+                        # issueList = self.convertIssueResultsToDict(result.issues, ComicInformationSource.ResultType.Issue)
+                    #publisher = result.publisher.name if result.publisher is not None else None
                     listDetails.update({
                         'listID': str(result.id), 
                         'name' : result.name, 
-                        'publisher' : publisher, 
+                        'publisher' : "", 
                         'issues': issueList, 
-                        'numIssues' : result.issue_count, 
-                        'description' : result.description, 
-                        'summary' : result.summary,
+                        'numIssues' : len(issueList), 
+                        'description' : result.desc, 
+                        'summary' : "",
                         'dataSource' : self.type
                         })
                     dictResults.append(listDetails)
@@ -198,12 +202,12 @@ class CV(ComicInformationSource):
         results = None
         matches = []
 
-        if config.CV.check_series and None not in (name, startYear):
+        if config.Metron.check_series and None not in (name, startYear):
             #printResults("Info: Searching CV for series : %s (%s)" % (name, startYear), 4) 
             dynamicName = utilities.getDynamicName(name)
 
             # Try a search filter (exact text match only)     
-            results = self.getSeriesFromNameFilter(name)
+            results = self.getSeriesFromNameFilter(name, startYear)
 
             # Find matches if results exist
             if results is not None and len(results) > 0:
@@ -215,25 +219,28 @@ class CV(ComicInformationSource):
                             matches.append(match)
 
             # No matches from CV FILTER lookup
-            if len(matches) == 0:
+            #if len(matches) == 0:
                 # Try resource search instead of filter
-                results = self.getSeriesFromNameSearch(name)
+                #results = self.getSeriesFromNameSearch(name)
 
         # Return *all* results for processing/filtering by dataManager
         return results
 
-    def getSeriesFromNameFilter(self,name : str) -> list[dict]:
-        # Use FILTER to identify CV matches from series name
+    def getSeriesFromNameFilter(self,name : str, startYear : int = None) -> list[dict]:
         results = None
         resultsType = ComicInformationSource.ResultType.SeriesList
 
-        if not config.CV.check_series: return None
+        if not config.Metron.check_series: return None
 
-        try:
-            results = _cvSession.list_volumes(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
-            results = self.convertSeriesResultsToDict(results, resultsType)
-        except Exception as e:
-            printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
+        #try:
+        if startYear is None:
+            results = _metronSession.series_list({"name": name})
+        else:
+            results = _metronSession.series_list({"name": name, "year_began": int(startYear)})
+
+        results = self.convertSeriesResultsToDict(results, resultsType)
+        #except Exception as e:
+        #    printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
 
         return results
 
@@ -243,10 +250,10 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.SeriesList
 
-        if not config.CV.check_series: return None
+        if not config.Metron.check_series: return None
 
         #try:
-        results = _cvSession.search(resource=simyan.comicvine.ComicvineResource.VOLUME,query=name,max_results=MAX_RESULTS)
+        results = _metronSession.search(resource=simyan.comicvine.ComicvineResource.VOLUME,query=name)
         results = self.convertSeriesResultsToDict(results, resultsType)
         #except Exception as e:
         #    printResults("CV Error: Unable to search for series \"%s\" : %s" % (name,str(e)), 4)
@@ -258,12 +265,11 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.Series
 
-        if not config.CV.check_series: return None
-
+        if not config.Metron.check_series: return None
         if dataSourceType is not self.type: return None
 
         #try:
-        results = _cvSession.get_volume(seriesID)
+        results = _metronSession.series(seriesID)
         results = self.convertSeriesResultsToDict(results, resultsType)
         #except Exception as e:
         #    printResults("CV Error: Unable to search for series [%s] : %s" % (seriesID, str(e)), 4)
@@ -271,24 +277,24 @@ class CV(ComicInformationSource):
         return results
 
 
-    def getIssuesFromSeriesID(self, seriesID : str, dataSourceType : ComicInformationSource.SourceType = None) -> list[dict]:
+    def getIssuesFromSeriesID(self, seriesID : str, dataSourceType : ComicInformationSource.SourceType = None) -> dict[dict]:
         resultsDict = dict()
         resultsType = ComicInformationSource.ResultType.IssueList
 
         ### Issue results required for series validation ###
         # if not config.CV.check_issues: return None
 
-        try:
-            if seriesID is not None and dataSourceType == self.type:
-                results = _cvSession.list_issues(params={"filter": "volume:%s" % (seriesID)})
-                resultsList = self.convertIssueResultsToDict(results, resultsType)
-                if resultsList is not None:
-                    for result in resultsList:
-                        resultsDict[result['issueNum']] = result
+        #try:
+        if seriesID is not None and dataSourceType == self.type:
+            results = _metronSession.issues_list(params={"series_id" : seriesID})
+            resultsList = self.convertIssueResultsToDict(results, resultsType)
+            if resultsList is not None:
+                for result in resultsList:
+                    result['seriesID'] = seriesID
+                    resultsDict[result['issueNum']] = result
 
-        except Exception as e:
-            printResults("CV Error: Unable to search for series issues using series ID [%s] : %s" % (seriesID,str(e)), 4)
-        
+        #except Exception as e:
+        #    printResults("Metron Error: Unable to search for series issues using series ID [%s] : %s" % (seriesID,str(e)), 4)        
 
         return resultsDict
 
@@ -297,10 +303,10 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.Issue
 
-        if not config.CV.check_issues: return None
+        if not config.Metron.check_issues: return None
 
         try:
-            results = _cvSession.get_issue(issueID)
+            results = _metronSession.issue(issueID)
             results = self.convertIssueResultsToDict(results, resultsType)
         except Exception as e:
             printResults("CV Error: Unable to search for issue ID [%s] : %s" % (issueID, str(e)), 4)
@@ -311,10 +317,10 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.ReadingLists
 
-        if not config.CV.check_arcs: return None
+        if not config.Metron.check_arcs: return None
 
         try:
-            results = _cvSession.list_story_arcs(params={"filter": "name:%s" % (name)},max_results=MAX_RESULTS)
+            results = _metronSession.arcs_list(params={"name" : name})
             results = self.convertReadingListResultsToDict(results, resultsType)
         except Exception as e:
             printResults("CV Error: Unable to search for story arc \"%s\" : %s" % (name, str(e)), 4)
@@ -325,15 +331,13 @@ class CV(ComicInformationSource):
         results = None
         resultsType = ComicInformationSource.ResultType.ReadingList
 
-        if not config.CV.check_arcs: return None
+        if not config.Metron.check_arcs: return None
 
         #try:
         if listID is not None:
-            results = _cvSession.get_story_arc(listID)
+            results = _metronSession.story_arc(listID)
             results = self.convertReadingListResultsToDict(results, resultsType)
         #except Exception as e:
         #    printResults("CV Error: Unable to search for issue ID [%s] : %s" % (name, str(e)), 4)
 
         return results
-
-            

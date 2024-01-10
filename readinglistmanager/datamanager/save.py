@@ -6,6 +6,7 @@ import json
 from enum import Enum
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.series import CoreSeries
 from readinglistmanager.datamanager.datasource import Source, ListSourceType
 from readinglistmanager import filemanager, utilities, config
 
@@ -14,6 +15,8 @@ class OutputFileType(Enum):
     JSON = ('.json', filemanager.jsonOutputDirectory)
     CBL = ('.cbl', filemanager.cblOutputDirectory)
     TXT = ('.txt', filemanager.outputDirectory)
+    PUML = ('.puml', filemanager.outputDirectory)
+    DOT = ('.dot', filemanager.outputDirectory)
 
     def getExtension(self) -> str:
         return self.value[0]
@@ -72,8 +75,8 @@ def saveReadingLists(readingLists: list[ReadingList], outputFileType: OutputFile
                 saveReadingList(readingList, outputFileType)
 
 
-def saveDataListToTXT(fileName: str, listData: list, isCompleteFilePath=False) -> None:
-    outputFileType = OutputFileType.TXT
+def saveDataList(fileName: str, listData: list, isCompleteFilePath=False, outputFileType = OutputFileType.TXT) -> None:
+    #outputFileType = OutputFileType.TXT
     if not isinstance(listData, list):
         if isinstance(listData, set) or isinstance(listData, tuple):
             listData = list(listData)
@@ -92,9 +95,20 @@ def saveDataListToTXT(fileName: str, listData: list, isCompleteFilePath=False) -
             for line in listData:
                 outputFile.write(f"{line}\n")
 
+def saveEventSeriesSummary(stringData : str):
+    saveDataList(filemanager.eventSeriesFile, stringData, True)
+
+def saveSeriesEventSummary(stringData : str):
+    saveDataList(filemanager.seriesEventFile, stringData, True)
+
+def savePUMLFile(stringData : str):
+    saveDataList(filemanager.pumlFile, stringData, True, OutputFileType.PUML)
+
+def saveVizGraphFile(stringData : str):
+    saveDataList(filemanager.vizGraphFile, stringData, True, OutputFileType.DOT)
 
 def getReadingListOutputDirectory(readingList: ReadingList, outputFileType: OutputFileType) -> str:
-    originFolder = filemanager.readingListDirectory
+    originFolder = filemanager.cblReadingListImportDirectory
     destFolder = outputFileType.getDirectory()
 
     if isinstance(readingList.source, Source):

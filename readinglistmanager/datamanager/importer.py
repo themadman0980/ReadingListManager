@@ -8,6 +8,7 @@ from readinglistmanager.utilities import printResults
 from readinglistmanager.model.readinglist import ReadingList
 from readinglistmanager.model.series import Series
 from readinglistmanager.model.issue import Issue
+from readinglistmanager.model.date import PublicationDate
 import xml.etree.ElementTree as ET
 
 dbTables = {'ReadingLists': 'ReadingListsView', 'ReadingListDetails': 'ReadingListDetailsView', 'IssueDetails': 'ComicsView'}
@@ -18,14 +19,14 @@ def parseCBLfiles():
 
     readingLists = []
     fileCount = 0
-    for root, dirs, files in os.walk(filemanager.readingListDirectory):
+    for root, dirs, files in os.walk(filemanager.cblReadingListImportDirectory):
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
                 fileCount += 1
 
     processedFileCount = 0
-    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.readingListDirectory), 2)
-    for root, dirs, files in os.walk(filemanager.readingListDirectory):
+    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.cblReadingListImportDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.cblReadingListImportDirectory):
         for file in files:
             if file.endswith(".cbl") and not file.startswith('._'):
                 #try:
@@ -59,33 +60,149 @@ def parseCBLfiles():
                     issueNumber = entry.attrib['Number']
                     issueYear = None
                     if 'Year' in entry.attrib:
-                        issueYear = entry.attrib['Year']
+                        issueYear = PublicationDate(entry.attrib['Year'])
                     
-                    seriesID = issueID = None
+                    essentialFields = (seriesName, seriesStartYear, issueNumber)
+                    discardValues = [None, "", " "]
+                    problem = False
 
-                    # Check for ID details in CBL entry
-                    databaseEntries = entry.findall('Database')
-                    if databaseEntries is not None or len(databaseEntries) == 0:
-                        for databaseElement in databaseEntries:
-                            if 'Name' in databaseElement.attrib:
-                                if databaseElement.attrib['Name'] == 'cv':
-                                    seriesID = databaseElement.attrib['Series']
-                                    issueID = databaseElement.attrib['Issue']
+                    for field in essentialFields:
+                        if field in discardValues:
+                            problem = True
+
+                    if problem:
+                        continue
+
+                    seriesID = issueID = None
                     
                     curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
 
                     # Get issue using series
                     if isinstance(curIssue,Issue):
-                        curIssue.year = issueYear
-                        # Update seriesID if found
-                        if seriesID is not None and utilities.isValidID(seriesID) and isinstance(curIssue.series,Series) and curIssue.series.id is None:
-                            curIssue.series.id = seriesID
-                                        
-                        # Update issueID if found
-                        if issueID is not None and utilities.isValidID(issueID) and isinstance(curIssue,Issue):
-                            curIssue.id = issueID
+                        curIssue.setSourceDate(issueYear)
+
+                        # Check for ID details in CBL entry
+                        databaseEntries = entry.findall('Database')
+
+                        # Add ID for any database sources found
+                        if databaseEntries is not None or len(databaseEntries) == 0:
+                            for databaseElement in databaseEntries:
+                                if 'Name' in databaseElement.attrib:
+                                    for webSource in dataManager.activeWebSources:
+                                        sourceNames = [webSource.type.value.lower()]
+                                        if webSource.type.value.lower() == 'comicvine':
+                                            sourceNames.append('cv')
+                                        if databaseElement.attrib['Name'].lower() in sourceNames:
+                                            # Update issue ID
+                                            curIssue.setSourceID(webSource.type,databaseElement.attrib['Issue'])
+
+                                            # Update series ID
+                                            if curIssue.series is not None:
+                                                if curIssue.series.hasValidID(webSource.type):
+                                                    if curIssue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
+                                                        printResults("Warning: Series '%s (%s)' existing ID [%s] does not match proposed ID [%s]!" % (curIssue.series.name, curIssue.series.startYear, curIssue.series.getSourceID(webSource.type),databaseElement.attrib['Series']))
+                                                        #TODO: Handle digital releases of one-shots (eg. CVID 28134 vs 34404)
+                                                else:
+                                                    curIssue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
+
+                                            break
 
                     readingList.addIssue(i, curIssue)
+                    curIssue.addReadingListRef(readingList)
+
+                if len(readingList.issueList) == 0:
+                    printResults(
+                        "Warning: No issues found for list : %s" % (file), 4)
+
+                readingLists.append(readingList)
+                #except Exception as e:
+                #    printResults("Unable to process file at %s : %s" %
+                #                 (os.path.join(str(root), str(file)), str(e)), 3)
+
+    return readingLists
+
+def parseTXTfiles():
+
+    readingLists = []
+    fileCount = 0
+    for root, dirs, files in os.walk(filemanager.textReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".txt") and not file.startswith('._'):
+                fileCount += 1
+
+    processedFileCount = 0
+    printResults("Processing %s CBL files in %s" % (fileCount,filemanager.textReadingListImportDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.textReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".txt") and not file.startswith('._'):
+                #try:
+                curFilename = file
+                curFilePath = os.path.join(root, file)
+                # print("Parsing %s" % (filename))
+                string = open(curFilePath,"r").read()
+                splitString = string.split('\n')
+                processedFileCount += 1
+
+                listSource = datasource.Source(curFilename, curFilePath, datasource.ListSourceType.TXT)
+
+                readingList = ReadingList(source = listSource)
+
+                i = 1
+                if config.Troubleshooting.verbose:
+                    printResults("Updating issue data for reading list : %s [%s]" % (
+                        readingList.name, readingList.source.type.value), 3)
+
+                for entry in splitString:
+                    match = utilities.parseStringIssueList(entry)
+                    if match is not None:
+                        printResults("[%s / %s] Processing %s" % (processedFileCount, fileCount, i),4,False,True)
+                                            
+                        seriesName = match['Series']
+                        seriesStartYear = utilities.getCleanYear(match['Year'])
+                        issueNumList = list()
+
+                        if 'FirstIssueNum' not in match or match['FirstIssueNum'] is None:
+                            # No issue numbers specified
+
+                            # Create series and validate
+                            curSeries = dataManager.getSeriesFromDetails(seriesName,seriesStartYear)
+                            dataManager._updateSeriesFromDataSources(curSeries)
+
+                            # Get issue list
+                            issueNumList = curSeries.getIssueNumsList()
+                            issueNumList.sort(key=lambda x: int(x))
+
+                        else:
+                            # Issue numbers specified
+                            firstIssueNumber = int(match['FirstIssueNum'])
+                            issueNumList.append(firstIssueNumber)
+
+                            if match['LastIssueNum'] is not None:
+                                lastIssueNumber = int(match['LastIssueNum'])
+
+                                # Create list of numbers (assumes no gaps)
+                                for curIssueNum in range(firstIssueNumber+1,lastIssueNumber+1):
+                                    issueNumList.append(curIssueNum)
+
+                        essentialFields = (seriesName, seriesStartYear)
+                        discardValues = [None, "", " "]
+                        problem = False
+
+                        for field in essentialFields:
+                            if field in discardValues:
+                                problem = True
+
+                        if problem:
+                            continue
+
+                        seriesID = issueID = None
+
+                        for issueNumber in issueNumList:
+                            curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
+                            curIssue.addReadingListRef(readingList)
+
+                            i += 1
+                            readingList.addIssue(i, curIssue)
 
                 if len(readingList.issueList) == 0:
                     printResults(
@@ -109,7 +226,7 @@ def getOnlineLists():
         for file in files:
             if file.endswith(".db"):
                 # TODO : Re-enable cbro.db
-                if not (file == "cv.db" or file == "data.db" or file =="overrides.db"):
+                if file not in ("cv.db", "data.db", "overrides.db", "metron.db"):
                     #try:
                     # Create Source object
                     filePath = os.path.join(root, file)
@@ -156,13 +273,28 @@ def getOnlineLists():
                                         listEntryID, readingList.name), 4)
                                 
                                 #for issueEntry in entryMatches:
-                                _, seriesName, seriesStartYear, issueNum, _ = entryMatches[0]
+                                _, seriesName, seriesStartYear, issueNum, _, sourceIssueDate = entryMatches[0]
 
-                                if None in (seriesName, seriesStartYear):
-                                    curProblemEntries += 1
-                                else:
-                                    curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
-                                    curReadingList.addIssue(listEntryNum, curIssue)
+                                essentialFields = (seriesName, seriesStartYear, issueNum)
+                                discardValues = [None, "", " "]
+                                problem = False
+
+                                for field in essentialFields:
+                                    if field in discardValues:
+                                        curProblemEntries += 1
+                                        problem = True
+
+                                if problem:
+                                    continue
+
+                                curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear,issueNum)
+
+                                if curIssue is not None and isinstance(curIssue, Issue):
+                                    if sourceIssueDate is not None: 
+                                        curIssue.setSourceDate(PublicationDate(sourceIssueDate))
+
+                                curReadingList.addIssue(listEntryNum, curIssue)
+                                curIssue.addReadingListRef(curReadingList)
                         
                         totalProblemEntries += curProblemEntries
                         if curProblemEntries > 0: 
@@ -174,3 +306,4 @@ def getOnlineLists():
                     #    printResults("Error: Unable to process db file %s : %s" % (file,e),2)
 
     return onlineLists
+

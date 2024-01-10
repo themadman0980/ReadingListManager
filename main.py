@@ -17,10 +17,11 @@ def main():
     printResults("Reading data from sources...", 1, True)
     readingLists = []
 
-    if config.Troubleshooting.process_cbl:
-        readingLists = importer.parseCBLfiles()
+    if config.Troubleshooting.process_files:
+        readingLists += importer.parseCBLfiles()
+        readingLists += importer.parseTXTfiles()
 
-    if config.Troubleshooting.process_web_dl:
+    if config.Troubleshooting.process_web_db:
         readingLists += importer.getOnlineLists()
 
     numLists = len(readingLists)
@@ -41,11 +42,24 @@ def main():
     dataManager.validateReadingLists(readingLists)
     dataManager.processProblemData()
 
+    #Reorder generated lists
+    if config.Export.sort_generated_by_release_date:
+        ReadingList.sortListsByReleaseDate(readingLists)
+
+
     printResults("Summarising results...", 1, True)
 
     dataManager.printSummaryResults()
     problemdata.ProblemData.printSummaryResults()
-    dataManager.saveSeriesSummary(readingLists)
+
+    stringData = ReadingList.getEventSeriesSummary(readingLists)
+    save.saveEventSeriesSummary(stringData)
+
+    stringData = dataManager.getSeriesEvents()
+    save.saveSeriesEventSummary(stringData)
+
+    stringData = dataManager.getVizGraphString()
+    save.saveVizGraphFile(stringData)
     #ReadingList.printSummaryResults(readingLists)
     #problemdata.ProblemData.printSummaryResults()
     #problemdata.ProblemData.exportToFile()
