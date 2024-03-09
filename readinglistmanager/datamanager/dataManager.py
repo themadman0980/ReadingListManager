@@ -50,7 +50,8 @@ overrideMatchCounter = 0
 
 lookupMatch = {'match' : None, 'problemData' : None }
 
-CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl"]
+CORE_SERIES = ["Superman", "Batman", "Aquaman", "The Flash", "Justice League", "Wonder Woman", "Supergirl", \
+    "Star Wars", "Star Wars: Darth Vader", "Star Wars: Bounty Hunters", "Star Wars: Doctor Aphra"]
 
 _coreSeriesCollection = CoreSeriesCollection()
 
@@ -115,12 +116,12 @@ def getSeriesFromIssueID(dataSourceType : ComicInformationSource.SourceType, iss
 
     return series
 
-def getSeriesFromDetails(name : str, startYear : str) -> Series:
+def getSeriesFromDetails(name : str, startYear : str, seriesID : str = None) -> Series:
     series = None 
     seriesKey = Series.getSeriesKey(name, startYear)
 
     # Check if series exists in
-    if seriesKey in _series["Keys"]:
+    if seriesKey in _series["Keys"] and seriesID is not None and _series["Keys"][seriesKey].doesIDMatch(seriesID):
         series = _series["Keys"][seriesKey]
     else:
         if _seriesOverrideList is not None and seriesKey in _seriesOverrideList:
@@ -129,7 +130,9 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
             #try:
             for webSource in activeWebSources:
                 if webSource.type.value in _seriesOverrideList[seriesKey]:
-                    seriesID = _seriesOverrideList[seriesKey][webSource.type.value]
+                    if seriesID is None: 
+                        seriesID = _seriesOverrideList[seriesKey][webSource.type.value]
+
                     series = getSeriesFromSeriesID(webSource.type, seriesID)
                     if isinstance(series, Series):
                         series.altSeriesKeys.append(seriesKey)
@@ -140,8 +143,7 @@ def getSeriesFromDetails(name : str, startYear : str) -> Series:
         # If no result/error in override list
         if series is None:
             # Check all available data sources for an exact match
-            series = createNewSeries(name, startYear)
-        
+            series = createNewSeries(name, startYear)        
 
     return series
 

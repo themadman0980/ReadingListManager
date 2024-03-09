@@ -153,6 +153,7 @@ def parseTXTfiles():
                         readingList.name, readingList.source.type.value), 3)
 
                 for entry in splitString:
+                    curSeries = None
                     match = utilities.parseStringIssueList(entry)
                     if match is not None:
                         printResults("[%s / %s] Processing %s" % (processedFileCount, fileCount, i),4,False,True)
@@ -161,12 +162,32 @@ def parseTXTfiles():
                         seriesStartYear = utilities.getCleanYear(match['Year'])
                         issueNumList = list()
 
+                        # Force ID's from Comicvine
+                        curSourceType = datasource.ComicInformationSource.SourceType.Comicvine
+
+                        # Retrieve series match using details provided
+                        curSeries = dataManager.getSeriesFromDetails(seriesName,seriesStartYear)
+                        
+                        if 'SeriesID' in match and match['SeriesID'] is not None:
+                            # There is a specified seriesID
+
+                            if curSeries is not None and isinstance(curSeries, Series):
+                                # We are working with a valid series object
+
+                                if curSeries.hasValidID(curSourceType): 
+                                    if not curSeries.doesIDMatch(match['SeriesID'],curSourceType):
+                                    # SeriesID field doesn't match ID of curSeries object
+                                        #Force create new series and assign seriesID
+                                        curSeries = dataManager.createNewSeries(seriesName,seriesStartYear)
+                                
+                                if not curSeries.hasValidID(curSourceType):
+                                    # series has no ID
+                                    curSeries.setSourceID(curSourceType,match['SeriesID'])
+
+                        dataManager._updateSeriesFromDataSources(curSeries)
+
                         if 'FirstIssueNum' not in match or match['FirstIssueNum'] is None:
                             # No issue numbers specified
-
-                            # Create series and validate
-                            curSeries = dataManager.getSeriesFromDetails(seriesName,seriesStartYear)
-                            dataManager._updateSeriesFromDataSources(curSeries)
 
                             # Get issue list
                             issueNumList = curSeries.getIssueNumsList()
@@ -195,10 +216,13 @@ def parseTXTfiles():
                         if problem:
                             continue
 
-                        seriesID = issueID = None
 
                         for issueNumber in issueNumList:
-                            curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
+                            if curSeries is not None and isinstance(curSeries, Series) and curSeries.hasValidID:
+                                curIssue = curSeries.getIssue(issueNumber)
+                            else:
+                                curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
+                                
                             curIssue.addReadingListRef(readingList)
 
                             i += 1
