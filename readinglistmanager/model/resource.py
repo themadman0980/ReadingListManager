@@ -15,6 +15,20 @@ class Resource():
 
     def hasValidID(self, source : "ComicInformationSource.SourceType" = None):
         return self.sourceList.hasValidID(source)
+    
+    def doesIDMatch(self, id : str, source : "ComicInformationSource.SourceType" = None):
+        if source is not None and isinstance(source, ComicInformationSource.SourceType):
+            #Check ID from specified source
+            if self.getSourceID(source) == id:
+                return True
+        else:
+            #check ID's from ALL sources
+            for source in self.sourceList:
+                if source.id == id:
+                    return True
+        
+        # No matches found
+        return False
 
     def getSourceID(self, source: "ComicInformationSource.SourceType"):
         return self.sourceList.getSourceID(source)

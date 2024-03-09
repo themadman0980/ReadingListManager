@@ -343,7 +343,8 @@ def parseStringIssueList(entry: str):
     #]
 
     entry = entry.strip()
-    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))?)? *$'
+    #issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\)(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))?)? *$'
+    issueListPattern = r'(?P<Series>.+?) *\((?P<Year>\d{4})\) *(?:\[(?P<SeriesID>\d+)?\])?(?: *#(?P<FirstIssueNum>\d+)(?:-(?P<LastIssueNum>\d+))?)? *$'
     issueListDetails = None
 
     match = re.search(issueListPattern, entry, re.IGNORECASE)
