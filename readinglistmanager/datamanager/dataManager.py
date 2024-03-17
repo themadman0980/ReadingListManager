@@ -831,7 +831,7 @@ def getReadingListSet():
     return readingListSet
 
 def getSeriesIDList() -> list:
-    seriesIDList = set(series.id for series in getSeriesSet())
+    seriesIDList = set(series.getSourceID(ComicInformationSource.SourceType.Comicvine) for series in getSeriesSet())
     return seriesIDList
 
 def getIssueNumsList(seriesID : str, sourceType : ComicInformationSource.SourceType) -> list:

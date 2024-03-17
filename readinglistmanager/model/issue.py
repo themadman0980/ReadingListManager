@@ -11,7 +11,7 @@ class Issue(Resource):
 
     def __init__(self, series, issueNumber : str, dataSourceType):
         if issueNumber is None:
-            printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.id,issueNumber),5)
+            printResults("Warning: Invalid issue number for %s (%s) [%s] #%s" % (series.name,series.startYear,series.getSourceID(ComicInformationSource.SourceType.Comicvine),issueNumber),5)
         self.issueNumber = str(issueNumber)
         self.series = series
         self.listReferences = set()
