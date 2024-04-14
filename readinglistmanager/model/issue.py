@@ -157,16 +157,35 @@ class Issue(Resource):
         return data
     
     def getJSONDict(self) -> dict:
-        data = {
-            'SeriesName': self.series.name,
-            'SeriesStartYear': self.series.startYear,
-            'IssueNum': self.issueNumber,
-            'IssueType': None,
-            'CoverDate': self.coverDateString,
-            'Database': self.sourceList.getSourcesJSON()
-            }            
 
-        if self.issueType is not None:
-            data.update({'IssueType': self.issueType.value})
+        sourceJSON = list()
+        issueSources = self.sourceList.getSourcesJSON()
+        seriesSources = self.series.sourceList.getSourcesJSON()
+
+        for key,value in issueSources.items():
+            if key in seriesSources:
+                curSource = {
+                    'name': key,
+                    'series': seriesSources[key],
+                    'issue': value
+                }
+                sourceJSON.append(curSource)
+
+        data = {
+            'series': {
+                'name':self.series.name,
+                'startYear':int(self.series.startYear)
+            },
+            'issue':{
+                'number':self.issueNumber,
+                #'type':""
+            }
+        }       
+        
+        if len(sourceJSON) > 0:
+             data['id'] = sourceJSON
+
+        if self.coverDateString not in ("",None):
+            data['issue']['coverDate'] = self.coverDateString
 
         return data

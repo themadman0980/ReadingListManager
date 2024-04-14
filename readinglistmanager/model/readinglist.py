@@ -3,6 +3,7 @@
 
 from readinglistmanager.utilities import printResults
 import os
+import uuid
 from datetime import datetime
 import re
 from readinglistmanager.model.issue import Issue
@@ -70,26 +71,44 @@ class ReadingList(Resource):
 
     def getJSONData(self):
 
-        listData = dict()
+        fileDetails = dict()
+        listDetails = dict()
+        exportIssueList = list()
 
-        listData['ListName'] = self.name
-        listData['Publisher'] = self.publisher
-        listData['StartYear'] = self.startYear
-        listData['IssueCount'] = self.getNumIssues()
+        #TODO: Grab details from imported file
+        fileDetails["UUID"]=str(uuid.uuid4())
+        fileDetails["version"]=1.0
+
+        listDetails['name'] = self.name
+        if self.publisher is not None: listDetails['publisher'] = self.publisher
+        if self.startYear is not None: listDetails['startYear'] = self.startYear 
+        #if self.endYear is not None: listDetails['endYear'] = self.endYear 
+
+        #listData['ListName'] = self.name
+        #listData['Publisher'] = self.publisher
+        #listData['StartYear'] = self.startYear
+        #listData['IssueCount'] = self.getNumIssues()
         #listData['Type'] = None
-        listData['Source'] = self.getSourceName()
+        #listData['Source'] = self.getSourceName()
 
+        #TODO: fix reading list ID export
         if utilities.isValidID(self.id):
-            listData['Database'] = list()
-            database = {'Name': 'Comicvine', 'ID': self.id}
-            listData['Database'].append(database)
+            listDetails['source'] = list()
+            source = {'name': 'comicvine', 'id': self.id}
+            listDetails['source'].append(source)
 
-        issueData = list()
+            #database = {'Name': 'Comicvine', 'ID': self.id}
+            #listData['Database'].append(database)
+
 
         for issue in self.issueList.values():
             if isinstance(issue, Issue):
-                issueData.append(issue.getJSONDict())
+                exportIssueList.append(issue.getJSONDict())
 
+        listData = dict()
+        listData["fileDetails"]=fileDetails
+        listData["listDetails"]=listDetails
+        listData["issueList"]=exportIssueList
         #listData['Issues'] = dict()
         #for number, issue in self.issueList.items():
         #    if isinstance(issue, Issue):

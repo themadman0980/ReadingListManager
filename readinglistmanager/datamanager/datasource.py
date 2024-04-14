@@ -304,16 +304,16 @@ class WebSourceList():
         return list(self._sourceList.values())
 
     def getSourcesJSON(self):
-        sourceIDs = list()
+        #sourceIDs = list()
+        sourceIDs = dict()
 
         for source in self.getSourcesList():
 
             if source.id is not None:
-                curSource = dict()
-                curSource['Name'] = source.name
-                curSource['ID'] = source.id
-
-                sourceIDs.append(curSource)
+                #curSource['name'] = source.name
+                #curSource['id'] = source.id
+                #sourceIDs.append(curSource)
+                sourceIDs[source.name]=source.id
 
         return sourceIDs
 
