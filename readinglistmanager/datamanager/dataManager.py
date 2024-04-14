@@ -121,8 +121,10 @@ def getSeriesFromDetails(name : str, startYear : str, seriesID : str = None) -> 
     seriesKey = Series.getSeriesKey(name, startYear)
 
     # Check if series exists in
-    if seriesKey in _series["Keys"] and seriesID is not None and _series["Keys"][seriesKey].doesIDMatch(seriesID):
-        series = _series["Keys"][seriesKey]
+    if seriesKey in _series["Keys"]: #and seriesID is not None and _series["Keys"][seriesKey].doesIDMatch(seriesID):
+        # Don't grab series if seriesID doesn't match
+        if seriesID is None or _series["Keys"][seriesKey].doesIDMatch(seriesID):
+            series = _series["Keys"][seriesKey]
     else:
         if _seriesOverrideList is not None and seriesKey in _seriesOverrideList:
             # Series found in overrides list
@@ -140,10 +142,10 @@ def getSeriesFromDetails(name : str, startYear : str, seriesID : str = None) -> 
             #except Exception as e:
             #    printResults("Error : Unable to process series override for %s (%s) : %s" % (name, startYear, str(e)), 4)
             
-        # If no result/error in override list
-        if series is None:
-            # Check all available data sources for an exact match
-            series = createNewSeries(name, startYear)        
+    # If no result
+    if series is None:
+        # Check all available data sources for an exact match
+        series = createNewSeries(name, startYear)        
 
     return series
 

@@ -185,7 +185,10 @@ class Issue(Resource):
         if len(sourceJSON) > 0:
              data['id'] = sourceJSON
 
-        if self.coverDateString not in ("",None):
-            data['issue']['coverDate'] = self.coverDateString
+        coverDate = self.coverDateString
+        if coverDate not in ("",None):
+            data['issue'].update({'coverDate':self.coverDateString}) 
+        else:
+            pass
 
         return data

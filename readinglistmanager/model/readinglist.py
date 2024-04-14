@@ -106,9 +106,9 @@ class ReadingList(Resource):
                 exportIssueList.append(issue.getJSONDict())
 
         listData = dict()
-        listData["fileDetails"]=fileDetails
-        listData["listDetails"]=listDetails
-        listData["issueList"]=exportIssueList
+        listData["fileDetails"] = fileDetails
+        listData["listDetails"] = listDetails
+        listData["issueList"] = exportIssueList
         #listData['Issues'] = dict()
         #for number, issue in self.issueList.items():
         #    if isinstance(issue, Issue):
