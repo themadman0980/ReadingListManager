@@ -29,11 +29,11 @@ class CV(ComicInformationSource):
 
         return CV.instance
 
-    def convertIssueResultsToDict(self, issueResults : list[simyan.schemas.issue.IssueEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertIssueResultsToDict(self, issueResults : list[simyan.schemas.issue.Issue], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(issueResults, simyan.schemas.issue.IssueEntry):
+        if isinstance(issueResults, simyan.schemas.issue.Issue):
             # Single result found
             result = issueResults
             issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
@@ -54,7 +54,7 @@ class CV(ComicInformationSource):
             results.append(issueDetails)
         elif isinstance(issueResults, list):
             for result in issueResults:
-                if isinstance(result, simyan.schemas.issue.IssueEntry):
+                if isinstance(result, simyan.schemas.issue.Issue):
                     issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
                     issueType = ComicInformationSource._getIssueType(result.name,result.description,result.summary)
                     seriesID = None
@@ -71,7 +71,7 @@ class CV(ComicInformationSource):
                         'dataSource' : self.type
                         })
                     results.append(issueDetails)
-                elif isinstance(result, simyan.schemas.generic_entries.IssueEntry):
+                elif isinstance(result, simyan.schemas.generic_entries.GenericIssue):
                     issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
                     issueDetails.update({
                         'issueID' : str(result.id), 
@@ -91,7 +91,7 @@ class CV(ComicInformationSource):
         return results
 
 
-    def convertSeriesResultsToDict(self, volumeResults : list[simyan.schemas.volume.VolumeEntry], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertSeriesResultsToDict(self, volumeResults : list[simyan.schemas.volume.Volume], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 

@@ -10,8 +10,19 @@ class Resource():
     def __init__(self):
         self.sourceList = WebSourceList()
 
+    def setSourcesFromJSON(self, jsonSourcesData : list):
+        if isinstance(jsonSourcesData,list):
+            for source in jsonSourcesData:
+                sourceType = ComicInformationSource.SourceType[source['name']]
+                issueID = source['issue']
+                issue.setSourceID(sourceType,issueID)
+                self.setSourceID(source,sourceID)
+
     def setSourceID(self, source : "ComicInformationSource.SourceType", sourceID : str):
         self.sourceList.setSourceID(source,sourceID)
+
+    def setSourceURL(self, source : "ComicInformationSource.SourceType", sourceURL : str):
+        self.sourceList.setSourceURL(source,sourceURL)
 
     def hasValidID(self, source : "ComicInformationSource.SourceType" = None):
         return self.sourceList.hasValidID(source)
@@ -32,6 +43,9 @@ class Resource():
 
     def getSourceID(self, source: "ComicInformationSource.SourceType"):
         return self.sourceList.getSourceID(source)
+
+    def getSourceURL(self, source: "ComicInformationSource.SourceType"):
+        return self.sourceList.getSourceURL(source)
 
     def allSourcesChecked(self) -> bool:
         return self.sourceList.allSourcesChecked()

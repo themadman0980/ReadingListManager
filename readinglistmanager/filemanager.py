@@ -10,11 +10,13 @@ rootDirectory = os.getcwd()
 #rootDirectory = os.path.dirname(rootDirectory)
 dataDirectory = os.path.join(rootDirectory, "Data")
 cblReadingListImportDirectory = os.path.join(rootDirectory, "ReadingLists","CBL")
+jsonReadingListImportDirectory = os.path.join(rootDirectory, "ReadingLists","JSON")
 textReadingListImportDirectory = os.path.join(rootDirectory, "ReadingLists","TXT")
 resultsDirectory = os.path.join(rootDirectory, "Results")
 outputDirectory = os.path.join(rootDirectory, "Output")
 jsonOutputDirectory = os.path.join(outputDirectory, "JSON")
 cblOutputDirectory = os.path.join(outputDirectory, "CBL")
+schemaDirectory = os.path.join(rootDirectory,"readinglistmanager","schema")
 
 dataFile = os.path.join(dataDirectory, "data.db")
 cvCacheFile = os.path.join(dataDirectory, "cv.db")
@@ -27,17 +29,20 @@ eventSeriesFile = os.path.join(resultsDirectory, "event-series-%s.txt" % (_timeS
 seriesEventFile = os.path.join(resultsDirectory, "series-events-%s.txt" % (_timeString))
 pumlFile = os.path.join(outputDirectory, "puml-%s.puml" % (_timeString))
 vizGraphFile = os.path.join(outputDirectory, "%s.dot" % (_timeString))
+jsonReadingListSchemaFile = os.path.join(schemaDirectory,"comic-reading-list.schema.json")
 
 def checkDirectories():
 
     directories = [
         dataDirectory,
         cblReadingListImportDirectory,
+        jsonReadingListImportDirectory,
         textReadingListImportDirectory,
         resultsDirectory,
         outputDirectory,
         jsonOutputDirectory,
-        cblOutputDirectory
+        cblOutputDirectory,
+        schemaDirectory
         ]
 
     for directory in directories:

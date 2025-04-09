@@ -167,28 +167,23 @@ class Issue(Resource):
                 curSource = {
                     'name': key,
                     'series': seriesSources[key],
-                    'issue': value
+                    'issue': value['id']
                 }
                 sourceJSON.append(curSource)
 
         data = {
-            'series': {
-                'name':self.series.name,
-                'startYear':int(self.series.startYear)
-            },
-            'issue':{
-                'number':self.issueNumber,
-                #'type':""
-            }
+            'seriesName':self.series.name,
+            'seriesStartYear':int(self.series.startYear),
+            'issueNumber':self.issueNumber
+            #'issueType':""
         }       
+
+        coverDate = self.coverDateString
+        if coverDate not in ("",None):
+            data.update({'issueCoverDate':coverDate}) 
         
         if len(sourceJSON) > 0:
              data['id'] = sourceJSON
 
-        coverDate = self.coverDateString
-        if coverDate not in ("",None):
-            data['issue'].update({'coverDate':self.coverDateString}) 
-        else:
-            pass
 
         return data

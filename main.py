@@ -20,6 +20,7 @@ def main():
     if config.Troubleshooting.process_files:
         readingLists += importer.parseCBLfiles()
         readingLists += importer.parseTXTfiles()
+        readingLists += importer.parseJSONfiles()
 
     if config.Troubleshooting.process_web_db:
         readingLists += importer.getOnlineLists()

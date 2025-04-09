@@ -80,6 +80,7 @@ class ListSourceType(DataSourceType):
     CV = "CV"
     Metron = "Metron"
     TXT = "TXT"
+    JSON = "JSON"
 
 class Source:
     def __init__(self, name : str, file : str, sourceType : DataSourceType = None, tableDict : dict = None):
@@ -260,6 +261,7 @@ class WebSource():
         self.type = source
         self.checked = False
         self.id = None
+        self.url = None
 
     @property
     def name(self):
@@ -296,24 +298,20 @@ class WebSource():
 
 class WebSourceList():
     def __init__(self):
-        webSourcesManager = WebSourceManager.get()
-        if isinstance(webSourcesManager, WebSourceManager):
+        webSourcesManager = SourceManager.get()
+        if isinstance(webSourcesManager, SourceManager):
             self._sourceList = webSourcesManager.getBlankSourceList()
 
     def getSourcesList(self):
         return list(self._sourceList.values())
 
     def getSourcesJSON(self):
-        #sourceIDs = list()
         sourceIDs = dict()
 
         for source in self.getSourcesList():
 
-            if source.id is not None:
-                #curSource['name'] = source.name
-                #curSource['id'] = source.id
-                #sourceIDs.append(curSource)
-                sourceIDs[source.name]=source.id
+            if source.id is not None or source.url is not None:
+                sourceIDs[source.name] = {'id':source.id,'url':source.url}
 
         return sourceIDs
 
@@ -345,6 +343,16 @@ class WebSourceList():
         
         if sourceID is None:
             pass
+
+    def setSourceURL(self, source : ComicInformationSource.SourceType, sourceURL : str):
+        if source in self._sourceList:
+            self._sourceList[source].url = sourceURL
+
+    def getSourceURL(self, source : ComicInformationSource.SourceType):
+        if source in self._sourceList:
+            return self._sourceList[source].url
+        else:
+            return None
 
     def allSourcesChecked(self) -> bool:
         allSourcesChecked = True
@@ -381,14 +389,8 @@ class WebSourceList():
             return True
         else:
             return False
-            
-    def getSourceID(self, source: ComicInformationSource.SourceType):
-        if source in self._sourceList and source in WebSourceManager.WebSourceTypes:
-            return self._sourceList[source].id
-        else:
-            return None
-
-class WebSourceManager():
+                        
+class SourceManager():
     # Generates dict of WebSources for easy access and re-use by resources
 
     instance = None
@@ -396,10 +398,10 @@ class WebSourceManager():
 
     @classmethod
     def get(self):    
-        if WebSourceManager.instance is None: 
-            WebSourceManager.instance = WebSourceManager()
+        if SourceManager.instance is None: 
+            SourceManager.instance = SourceManager()
 
-        return WebSourceManager.instance
+        return SourceManager.instance
 
     # Needs to be updated for any new web data source
     WebSourceTypes = [
@@ -411,7 +413,7 @@ class WebSourceManager():
         databaseSource = ComicInformationSource.SourceType.Database
         self._sourceList[databaseSource] = WebSource(databaseSource)
 
-        for source in WebSourceManager.WebSourceTypes:
+        for source in SourceManager.WebSourceTypes:
             self._sourceList[source] = WebSource(source)
 
     def getBlankSourceList(self):

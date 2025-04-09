@@ -39,7 +39,8 @@ def getOutputFile(readingList: ReadingList, fileType: OutputFileType) -> str:
         fileName = readingList.getFileName() + fileType.getExtension()
         fileName = utilities.cleanFileName(fileName)
 
-        if config.Export.preserve_file_structure and fileType == OutputFileType.CBL:
+        #if config.Export.preserve_file_structure and fileType == OutputFileType.CBL:
+        if config.Export.preserve_file_structure :
             fileDir = getReadingListOutputDirectory(readingList, fileType)
         else:
             fileDir = fileType.getDirectory()
@@ -116,8 +117,9 @@ def getReadingListOutputDirectory(readingList: ReadingList, outputFileType: Outp
             sourceFolder = os.path.dirname(readingList.source.file)
         # Set output to subdirectory of output folder
         # Set top level of cbl output destination
-        destFolder = os.path.join(destFolder, readingList.source.type.value)
-        if readingList.source.type == ListSourceType.CBL and config.Export.preserve_file_structure:
+        #destFolder = os.path.join(destFolder, readingList.source.type.value)
+        #if readingList.source.type == ListSourceType.CBL and config.Export.preserve_file_structure:
+        if config.Export.preserve_file_structure:
             # Set full path to CBL, keeping relative location
             destFolder = str(sourceFolder).replace(originFolder, destFolder)
         elif readingList.source.type == ListSourceType.Website:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+import os, json
 from readinglistmanager import filemanager,utilities, config
 from readinglistmanager.datamanager import datasource, dataManager, dbManager
 from readinglistmanager.utilities import printResults
@@ -331,3 +331,134 @@ def getOnlineLists():
 
     return onlineLists
 
+
+def parseJSONfiles():
+
+    readingLists = []
+    fileCount = 0
+    for root, dirs, files in os.walk(filemanager.jsonReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".json") and not file.startswith('._'):
+                fileCount += 1
+
+    processedFileCount = 0
+    printResults("Processing %s JSON files in %s" % (fileCount,filemanager.jsonReadingListImportDirectory), 2)
+    for root, dirs, files in os.walk(filemanager.jsonReadingListImportDirectory):
+        for file in files:
+            if file.endswith(".json") and not file.startswith('._'):
+                #try:
+                curFilename = file
+                curFilePath = os.path.join(root, file)
+                # print("Parsing %s" % (filename))
+                jsonListData = json.load(open(curFilePath))
+                processedFileCount += 1
+
+                jsonSource = datasource.Source(curFilename, curFilePath, datasource.ListSourceType.JSON)
+
+                readingList = ReadingList.fromJSON(jsonListData,jsonSource)
+
+                # Populate attributes from imported json file
+                #try:
+                jsonData = jsonListData['issueList']
+
+                for issue in jsonData:
+                    sources = list()
+                    currentIssue = None
+                    
+                    seriesName = issue['seriesName']
+                    seriesStartYear = issue['seriesStartYear']
+                    issueNumber = issue['issueNumber']
+
+                    currentIssue = dataManager.getIssueFromDetails(seriesName,seriesStartYear,issueNumber)
+                    
+                    if currentIssue is not None:
+                        for source in issue['id']:
+                            sourceData = {'type':source['name'],'id':source['issue']}
+                            currentIssue.setSource()
+                            #sourceType = ComicInformationSource.SourceType[]
+                            #issueID = 
+                            issue.setSourceID(sourceType,issueID)
+
+                        readingList.addIssue(currentIssue)
+                        
+                #except Exception as e:
+                #    printResults("Unable to update list issues for \'%s\' from json data : %s" % (
+                #        jsonListData['listDetails']['name'], jsonData), 4)
+
+
+                i = 0
+                bookCount = len(cblBooks)
+                if config.Troubleshooting.verbose:
+                    printResults("Updating issue data for reading list : %s [%s]" % (
+                        readingList.name, readingList.source.type.value), 3)
+
+                for entry in cblBooks:
+                    i += 1
+                    printResults("[%s / %s] Processing %s / %s" % (processedFileCount, fileCount, i,bookCount),4,False,True)
+                                        
+
+                    seriesName = entry.attrib['Series']
+                    seriesStartYear = utilities.getCleanYear(entry.attrib['Volume'])
+                    issueNumber = entry.attrib['Number']
+                    issueYear = None
+                    if 'Year' in entry.attrib:
+                        issueYear = PublicationDate(entry.attrib['Year'])
+                    
+                    essentialFields = (seriesName, seriesStartYear, issueNumber)
+                    discardValues = [None, "", " "]
+                    problem = False
+
+                    for field in essentialFields:
+                        if field in discardValues:
+                            problem = True
+
+                    if problem:
+                        continue
+
+                    seriesID = issueID = None
+                    
+                    curIssue = dataManager.getIssueFromDetails(seriesName, seriesStartYear, issueNumber)
+
+                    # Get issue using series
+                    if isinstance(curIssue,Issue):
+                        curIssue.setSourceDate(issueYear)
+
+                        # Check for ID details in CBL entry
+                        databaseEntries = entry.findall('Database')
+
+                        # Add ID for any database sources found
+                        if databaseEntries is not None or len(databaseEntries) == 0:
+                            for databaseElement in databaseEntries:
+                                if 'Name' in databaseElement.attrib:
+                                    for webSource in dataManager.activeWebSources:
+                                        sourceNames = [webSource.type.value.lower()]
+                                        if webSource.type.value.lower() == 'comicvine':
+                                            sourceNames.append('cv')
+                                        if databaseElement.attrib['Name'].lower() in sourceNames:
+                                            # Update issue ID
+                                            curIssue.setSourceID(webSource.type,databaseElement.attrib['Issue'])
+
+                                            # Update series ID
+                                            if curIssue.series is not None:
+                                                if curIssue.series.hasValidID(webSource.type):
+                                                    if curIssue.series.getSourceID(webSource.type) != databaseElement.attrib['Series']:
+                                                        printResults("Warning: Series '%s (%s)' existing ID [%s] does not match proposed ID [%s]!" % (curIssue.series.name, curIssue.series.startYear, curIssue.series.getSourceID(webSource.type),databaseElement.attrib['Series']))
+                                                        #TODO: Handle digital releases of one-shots (eg. CVID 28134 vs 34404)
+                                                else:
+                                                    curIssue.series.setSourceID(webSource.type,databaseElement.attrib['Series'])
+
+                                            break
+
+                    readingList.addIssue(i, curIssue)
+                    curIssue.addReadingListRef(readingList)
+
+                if len(readingList.issueList) == 0:
+                    printResults(
+                        "Warning: No issues found for list : %s" % (file), 4)
+
+                readingLists.append(readingList)
+                #except Exception as e:
+                #    printResults("Unable to process file at %s : %s" %
+                #                 (os.path.join(str(root), str(file)), str(e)), 3)
+
+    return readingLists

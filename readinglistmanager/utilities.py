@@ -8,6 +8,9 @@ import string
 from datetime import datetime, date
 from readinglistmanager import filemanager
 import decimal
+import json
+from jsonschema import Draft202012Validator
+
 
 resultsFile = filemanager.resultsFile
 problemsFile = filemanager.problemsFile
@@ -17,7 +20,8 @@ stop_words = ['the', 'a', 'and']
 yearStringCleanTemplate = '[^0-9]'
 cleanStringTemplate = '[^a-zA-Z0-9\:\-\(\) ]'
 seriesKeyOverrides = {'The Star Wars':'thestarwars'}
-
+readingListJSONSchema = json.load(open(filemanager.jsonReadingListSchemaFile))
+readingListSchemaValidator = Draft202012Validator(readingListJSONSchema)
 
 def getCurrentTimeStamp():
     return int(round(datetime.now().timestamp()))
@@ -376,3 +380,10 @@ def stripIssueNumber(issueNum : str):
 
 def findPartialStringMatches(string : str, stringList : list[str]):
     return [s for s in stringList if string in s]
+
+def validate_json(jsonData):
+    try:
+        isValidJSON = readingListSchemaValidator.is_valid(jsonData)
+        return isValidJSON
+    except Exception as e:
+        return False

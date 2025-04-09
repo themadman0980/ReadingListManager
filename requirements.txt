@@ -1,2 +1,3 @@
 simyan>=1.2.0
 mokkari>=2.6.0
+jsonschema >=4.21.1

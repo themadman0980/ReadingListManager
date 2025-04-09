@@ -7,7 +7,7 @@ from readinglistmanager import config,filemanager,utilities
 from readinglistmanager.utilities import printResults, stripYearFromName
 from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.datamanager.datasource import ComicInformationSource, ListSourceType
-import mokkari.series, mokkari.issue, mokkari.arc
+import mokkari.schemas.series, mokkari.schemas.issue, mokkari.schemas.arc
 from mokkari.sqlite_cache import SqliteCache
 
 import mokkari
@@ -31,11 +31,11 @@ class Metron(ComicInformationSource):
 
         return Metron.instance
 
-    def convertIssueResultsToDict(self, issueResults : list[mokkari.issue.Issue], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertIssueResultsToDict(self, issueResults : list[mokkari.schemas.issue.Issue], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(issueResults, mokkari.issue.Issue):
+        if isinstance(issueResults, mokkari.schemas.issue.Issue):
             # Single result found
             result = issueResults
             issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
@@ -57,9 +57,10 @@ class Metron(ComicInformationSource):
                 'dataSource' : self.type
                 })
             results.append(issueDetails)
-        elif isinstance(issueResults, mokkari.issue.IssuesList):
+    # TODO: Ensure IssueList is fixed
+        elif isinstance(issueResults, list) and len(issueResults)>0 and isinstance(issueResults[0], mokkari.schemas.issue.BaseIssue):
             for result in issueResults:
-                if isinstance(result, mokkari.issue.Issue):
+                if isinstance(result, mokkari.schemas.issue.Issue):
                     issueDetails = ComicInformationSource._issueDetailsTemplate.copy()
 
                     if hasattr(result, 'desc'): 
@@ -90,11 +91,11 @@ class Metron(ComicInformationSource):
         return results
 
 
-    def convertSeriesResultsToDict(self, volumeResults : list[mokkari.series.Series], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertSeriesResultsToDict(self, volumeResults : list[mokkari.schemas.series.Series], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         results = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 
-        if isinstance(volumeResults, mokkari.series.Series):
+        if isinstance(volumeResults, mokkari.schemas.series.Series):
             # Single result found
             result = volumeResults
             seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
@@ -118,9 +119,9 @@ class Metron(ComicInformationSource):
                 'dataSource' : self.type
                 })
             results.append(seriesDetails)
-        elif isinstance(volumeResults, mokkari.series.SeriesList):
-            for result in volumeResults.series:
-                if isinstance(result, mokkari.series.Series):
+        elif isinstance(volumeResults, list) and len(volumeResults)>0 and isinstance(volumeResults[0],mokkari.schemas.series.BaseSeries):
+            for result in volumeResults:
+                if isinstance(result, mokkari.schemas.series.BaseSeries):
                     seriesDetails = ComicInformationSource._seriesDetailsTemplate.copy()
                     issueList = self.getIssuesFromSeriesID(result.id, self.type) if hasattr(result, 'id') else None
                     #issueList = self.convertIssueResultsToDict(issueList, ComicInformationSource.ResultType.IssueList) if issueList is not None else None
@@ -143,7 +144,7 @@ class Metron(ComicInformationSource):
         return results
 
 
-    def convertReadingListResultsToDict(self, searchResults : list[mokkari.arc.Arc], resultsType : ComicInformationSource.ResultType) -> list[dict]:
+    def convertReadingListResultsToDict(self, searchResults : list[mokkari.schemas.arc.Arc], resultsType : ComicInformationSource.ResultType) -> list[dict]:
         dictResults = []
         self.updateCounter(ComicInformationSource.SearchStatusType.SearchCount,resultsType)
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from readinglistmanager.utilities import printResults
-import os
+import os, json
 import uuid
 from datetime import datetime
 import re
@@ -209,10 +209,13 @@ class ReadingList(Resource):
         self._sourceNameOverride = None
         self.problems = dict()
         self.dynamicName = None
+        self.description = None
         self.startYear = None
+        self.endYear = None
         self.publisher = None
         self.sourceIssueList = None
         self.id = listID
+        self.uuid = str(uuid.uuid4())
         self.part = None
         self.key = None
 
@@ -351,6 +354,29 @@ class ReadingList(Resource):
             printResults("Unable to update list \'%s [%s]\' from match data : %s" % (
                 self.name, self.id, match), 4)
 
+    def updateListDetailsFromJSON(self, jsonData: dict) -> None:
+        # Populate attributes from imported json file
+        try:
+            if 'name' in jsonData: self.name = jsonData['name']
+            if 'publisher' in jsonData: self.publisher = jsonData['publisher']
+            if 'startYear' in jsonData: self.startYear = jsonData['startYear']
+            if 'endYear' in jsonData: self.endYear = jsonData['endYear']
+            if 'description' in jsonData: self.description = jsonData['description']
+            self.dataSourceType = ListSourceType.JSON
+
+            #TODO: Allow for sources of different type
+            if 'source' in jsonData:
+                for source in jsonData['source']:
+                    if source['name'] in ComicInformationSource.SourceType.values() and 'id' in source:
+                        sourceType = ComicInformationSource.SourceType[source['name']]
+                        issueID = source['id']
+                        issue.setSourceID(sourceType,issueID)
+
+            self.detailsFound = True
+        except Exception as e:
+            printResults("Unable to update list \'%s [%s]\' from json data : %s" % (
+                self.name, self.publisher, jsonData), 4)
+    
     def getNumIssues(self) -> int:
         return len(self.issueList) if self.issueList is not None else None
 
@@ -478,4 +504,26 @@ class ReadingList(Resource):
         
         return textLines
 
+    @classmethod
+    def fromJSON(self, jsonData, source):
+        isValidJSONFile = utilities.validate_json(jsonData)
+        if isValidJSONFile:
+            # Safe to assume data structure is valid. No further checks from here.
+            #try:
+            # Identify source
+            #sourceList = list()
+            #currentSource = None
+            #for source in jsonData['listDetails']['source']:
+            #    sourceName = source['name']
+            #    currentSource = Source(sourceName,file)
+            #    sourceList.append(currentSource)
 
+            # TODO: Account for multiple sources possible
+            newReadingList = ReadingList(source)
+            newReadingList.uuid = jsonData['fileDetails']['UUID']
+            newReadingList.updateListDetailsFromJSON(jsonData['listDetails'])
+
+            return newReadingList
+
+            #except:
+            #    pass
