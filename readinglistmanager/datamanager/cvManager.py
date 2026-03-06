@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from datetime import timedelta
 from html import unescape
 from readinglistmanager import config,filemanager,utilities
 #from readinglistmanager.datamanager import dataManager
@@ -8,9 +9,9 @@ from readinglistmanager.utilities import printResults
 from readinglistmanager.model.date import PublicationDate
 from readinglistmanager.datamanager.datasource import ComicInformationSource,ListSourceType
 import simyan.schemas.volume, simyan.schemas.issue, simyan.schemas.story_arc, simyan.comicvine
-from simyan.sqlite_cache import SQLiteCache
+from simyan.cache import SQLiteCache
 
-CACHE_RETENTION_TIME = 60 #days
+CACHE_RETENTION_TIME = timedelta(days=60)
 MAX_RESULTS = 100
 
 if config.CV.cache_searches:
